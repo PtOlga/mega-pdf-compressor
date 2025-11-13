@@ -1,0 +1,116 @@
+mkdir -p frontend
+cat > frontend/index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MEGA PDF Compressor</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+    .btn { background: #00a651; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; margin: 10px 0; }
+    .btn:disabled { background: #ccc; }
+    .status { background: #f5f5f5; padding: 16px; border-radius: 6px; margin: 20px 0; white-space: pre-wrap; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<h1>📦 MEGA PDF Compressor (бесплатно)</h1>
+<p>Выберите PDF из вашего MEGA → сожмите его → скачайте или сохраните обратно.</p>
+
+<button id="loginBtn" class="btn">🔐 Войти в MEGA и выбрать PDF</button>
+<div id="status" class="status hidden"></div>
+<button id="compressBtn" class="btn hidden" disabled>📤 Сжать</button>
+
+<script src="https://mega.nz/sdk/v4/sdk.js"></script>
+<script>
+  const statusEl = document.getElementById('status');
+  const loginBtn = document.getElementById('loginBtn');
+  const compressBtn = document.getElementById('compressBtn');
+  let selectedFileHandle = null;
+
+  mega.initialize({});
+
+  loginBtn.onclick = async () => {
+    try {
+      statusEl.textContent = 'Открываем MEGA...';
+      statusEl.classList.remove('hidden');
+
+      const file = await mega.selectFile({ extensions: ['pdf'], multiple: false });
+      selectedFileHandle = file;
+
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+      statusEl.innerHTML = `✅ Выбран: <b>${file.name}</b> (${sizeMB} МБ)\nГотов к сжатию.`;
+      compressBtn.classList.remove('hidden');
+      compressBtn.disabled = false;
+    } catch (e) {
+      statusEl.textContent = `❌ ${e.message || 'Отменено'}`;
+    }
+  };
+
+  compressBtn.onclick = async () => {
+    if (!selectedFileHandle) return;
+    compressBtn.disabled = true;
+    statusEl.textContent = 'Скачиваем файл из MEGA...';
+
+    try {
+      const arrayBuffer = await selectedFileHandle.read();
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+      const originalSizeMB = (blob.size / 1024 / 1024).toFixed(2);
+
+      // ⚠️ ЗАМЕНИТЕ ЭТУ ССЫЛКУ на ваш Railway URL после развёртывания!
+      const backendUrl = 'https://ваш-бэкенд.up.railway.app/compress';
+
+      const formData = new FormData();
+      formData.append('file', blob, selectedFileHandle.name);
+      formData.append('level', 'recommended'); // low, recommended, extreme
+
+      statusEl.textContent = `Сжимаем через iLovePDF (${originalSizeMB} МБ)...`;
+      const res = await fetch(backendUrl, { method: 'POST', body: formData });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `HTTP ${res.status}`);
+      }
+
+      const compressedBlob = await res.blob();
+      const compressedSizeMB = (compressedBlob.size / 1024 / 1024).toFixed(2);
+
+      // Получаем информацию о сжатии из заголовков
+      const reduction = res.headers.get('X-Reduction-Percent') || '?';
+
+      const url = URL.createObjectURL(compressedBlob);
+
+      statusEl.innerHTML = `✅ Готово! ${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%)<br>` +
+        `<a href="${url}" download="[Сжато] ${selectedFileHandle.name}">📥 Скачать</a>`;
+
+      // Кнопка "Сохранить в MEGA"
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'btn';
+      saveBtn.textContent = '💾 Сохранить в MEGA';
+      saveBtn.onclick = async () => {
+        statusEl.textContent = 'Загружаем в MEGA...';
+        try {
+          await mega.upload({
+            name: '[Сжато] ' + selectedFileHandle.name,
+            content: compressedBlob,
+            target: '///'
+          });
+          statusEl.innerHTML = '🎉 Сохранено в корневую папку MEGA!';
+        } catch (e) {
+          statusEl.textContent = `❌ Ошибка загрузки: ${e.message}`;
+        }
+      };
+      document.body.appendChild(saveBtn);
+
+    } catch (e) {
+      statusEl.textContent = `❌ ${e.message}`;
+      compressBtn.disabled = false;
+    }
+  };
+</script>
+
+</body>
+</html>
+EOF
