@@ -16,5 +16,5 @@ RUN pip install --upgrade pip && \
 COPY backend/app.py .
 
 EXPOSE 8000
-CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"]
+CMD gunicorn --bind 0.0.0.0:${PORT:-8000} app:app
 
