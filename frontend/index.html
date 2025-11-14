@@ -10,66 +10,238 @@
     .btn:disabled { background: #ccc; }
     .status { background: #f5f5f5; padding: 16px; border-radius: 6px; margin: 20px 0; white-space: pre-wrap; }
     .hidden { display: none; }
+    .input {
+      width: 100%;
+      max-width: 400px;
+      padding: 12px;
+      margin: 10px 0;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    #loginForm, #folderSelector, #fileSelector, #targetFolderSelector {
+      margin: 20px 0;
+    }
+    h3 {
+      color: #00a651;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
 
 <h1>📦 MEGA PDF Compressor (бесплатно)</h1>
-<p>Выберите PDF из вашего MEGA → сожмите его → скачайте или сохраните обратно.</p>
+<p>Войдите в MEGA → выберите PDF → сожмите → сохраните обратно в MEGA.</p>
 
-<button id="loginBtn" class="btn">🔐 Войти в MEGA и выбрать PDF</button>
+<div id="loginForm">
+  <input type="email" id="emailInput" placeholder="Email от MEGA" class="input">
+  <input type="password" id="passwordInput" placeholder="Пароль от MEGA" class="input">
+  <button id="loginBtn" class="btn">🔐 Войти в MEGA</button>
+  <p style="font-size: 12px; color: #666; margin-top: 10px;">
+    ⚠️ Ваш пароль обрабатывается только в браузере и не отправляется на сервер
+  </p>
+</div>
+
+<div id="folderSelector" class="hidden">
+  <h3>Шаг 1: Выберите папку с PDF файлами</h3>
+  <select id="sourceFolderList" class="input"></select>
+  <button id="selectSourceFolderBtn" class="btn">📁 Выбрать эту папку</button>
+</div>
+
+<div id="fileSelector" class="hidden">
+  <h3>Шаг 2: Выберите PDF файл для сжатия</h3>
+  <select id="fileList" class="input"></select>
+  <button id="selectFileBtn" class="btn">📄 Выбрать этот файл</button>
+</div>
+
+<div id="targetFolderSelector" class="hidden">
+  <h3>Шаг 3: Куда сохранить сжатый файл?</h3>
+  <select id="targetFolderList" class="input"></select>
+  <button id="selectTargetFolderBtn" class="btn">💾 Выбрать папку назначения</button>
+</div>
+
 <div id="status" class="status hidden"></div>
-<button id="compressBtn" class="btn hidden" disabled>📤 Сжать</button>
+<button id="compressBtn" class="btn hidden" disabled>📤 Сжать и сохранить в MEGA</button>
 
-<script src="https://mega.nz/sdk/v4/sdk.js" onload="initMega()"></script>
-<script>
+<script type="module">
+  import { Storage } from 'https://unpkg.com/megajs/dist/main.browser-es.mjs';
+
   const statusEl = document.getElementById('status');
   const loginBtn = document.getElementById('loginBtn');
+  const emailInput = document.getElementById('emailInput');
+  const passwordInput = document.getElementById('passwordInput');
+  const loginForm = document.getElementById('loginForm');
+
+  const folderSelector = document.getElementById('folderSelector');
+  const sourceFolderList = document.getElementById('sourceFolderList');
+  const selectSourceFolderBtn = document.getElementById('selectSourceFolderBtn');
+
+  const fileSelector = document.getElementById('fileSelector');
+  const fileList = document.getElementById('fileList');
+  const selectFileBtn = document.getElementById('selectFileBtn');
+
+  const targetFolderSelector = document.getElementById('targetFolderSelector');
+  const targetFolderList = document.getElementById('targetFolderList');
+  const selectTargetFolderBtn = document.getElementById('selectTargetFolderBtn');
+
   const compressBtn = document.getElementById('compressBtn');
-  let selectedFileHandle = null;
 
-  function initMega() {
-    if (typeof mega !== 'undefined') {
-      mega.initialize({});
-    } else {
-      console.error('MEGA SDK не загрузился');
-      statusEl.textContent = '❌ Ошибка загрузки MEGA SDK';
-      statusEl.classList.remove('hidden');
-    }
-  }
+  let storage = null;
+  let selectedFile = null;
+  let selectedSourceFolder = null;
+  let selectedTargetFolder = null;
+  let allFolders = [];
+  let allFiles = [];
 
+  // Вход в MEGA
   loginBtn.onclick = async () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+
+    if (!email || !password) {
+      alert('Введите email и пароль');
+      return;
+    }
+
     try {
-      statusEl.textContent = 'Открываем MEGA...';
+      loginBtn.disabled = true;
+      loginBtn.textContent = '⏳ Подключаемся...';
+      statusEl.textContent = 'Подключаемся к MEGA...';
       statusEl.classList.remove('hidden');
 
-      const file = await mega.selectFile({ extensions: ['pdf'], multiple: false });
-      selectedFileHandle = file;
+      storage = await new Storage({ email, password }).ready;
 
-      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-      statusEl.innerHTML = `✅ Выбран: <b>${file.name}</b> (${sizeMB} МБ)\nГотов к сжатию.`;
-      compressBtn.classList.remove('hidden');
-      compressBtn.disabled = false;
-    } catch (e) {
-      statusEl.textContent = `❌ ${e.message || 'Отменено'}`;
+      statusEl.textContent = '✅ Успешно подключились! Загружаем структуру папок...';
+
+      // Получаем все папки
+      allFolders = [];
+      const filesArray = Object.values(storage.files);
+
+      // Добавляем корневую папку
+      allFolders.push({ folder: storage.root, name: '📁 Корневая папка (Cloud Drive)', path: '/' });
+
+      // Рекурсивно собираем все папки
+      function collectFolders(folder, path = '') {
+        if (folder.children) {
+          for (const child of folder.children) {
+            if (child.directory) {
+              const fullPath = path + '/' + child.name;
+              allFolders.push({ folder: child, name: child.name, path: fullPath });
+              collectFolders(child, fullPath);
+            }
+          }
+        }
+      }
+
+      collectFolders(storage.root, '');
+
+      // Заполняем список папок-источников
+      sourceFolderList.innerHTML = '';
+      targetFolderList.innerHTML = '';
+
+      allFolders.forEach((item, index) => {
+        const option1 = document.createElement('option');
+        option1.value = index;
+        option1.textContent = item.path;
+        sourceFolderList.appendChild(option1);
+
+        const option2 = document.createElement('option');
+        option2.value = index;
+        option2.textContent = item.path;
+        targetFolderList.appendChild(option2);
+      });
+
+      loginForm.classList.add('hidden');
+      folderSelector.classList.remove('hidden');
+      statusEl.textContent = `✅ Найдено ${allFolders.length} папок. Выберите папку с PDF файлами.`;
+
+    } catch (error) {
+      statusEl.textContent = `❌ Ошибка входа: ${error.message}`;
+      loginBtn.disabled = false;
+      loginBtn.textContent = '🔐 Войти в MEGA';
     }
   };
 
+  // Шаг 1: Выбор папки-источника
+  selectSourceFolderBtn.onclick = () => {
+    const index = parseInt(sourceFolderList.value);
+    selectedSourceFolder = allFolders[index].folder;
+
+    // Собираем PDF файлы из выбранной папки
+    allFiles = [];
+    if (selectedSourceFolder.children) {
+      for (const child of selectedSourceFolder.children) {
+        if (!child.directory && child.name && child.name.toLowerCase().endsWith('.pdf')) {
+          allFiles.push(child);
+        }
+      }
+    }
+
+    if (allFiles.length === 0) {
+      statusEl.textContent = '❌ В этой папке нет PDF файлов. Выберите другую папку.';
+      return;
+    }
+
+    // Заполняем список файлов
+    fileList.innerHTML = '';
+    allFiles.forEach((file, index) => {
+      const option = document.createElement('option');
+      option.value = index;
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+      option.textContent = `${file.name} (${sizeMB} МБ)`;
+      fileList.appendChild(option);
+    });
+
+    folderSelector.classList.add('hidden');
+    fileSelector.classList.remove('hidden');
+    statusEl.textContent = `✅ Найдено ${allFiles.length} PDF файлов в папке "${allFolders[index].path}"`;
+  };
+
+  // Шаг 2: Выбор файла
+  selectFileBtn.onclick = () => {
+    const index = parseInt(fileList.value);
+    selectedFile = allFiles[index];
+
+    const sizeMB = (selectedFile.size / 1024 / 1024).toFixed(2);
+    statusEl.innerHTML = `✅ Выбран файл: <b>${selectedFile.name}</b> (${sizeMB} МБ)`;
+
+    fileSelector.classList.add('hidden');
+    targetFolderSelector.classList.remove('hidden');
+    statusEl.textContent = `✅ Файл выбран. Теперь выберите папку для сохранения сжатого файла.`;
+  };
+
+  // Шаг 3: Выбор папки назначения
+  selectTargetFolderBtn.onclick = () => {
+    const index = parseInt(targetFolderList.value);
+    selectedTargetFolder = allFolders[index].folder;
+
+    targetFolderSelector.classList.add('hidden');
+    compressBtn.classList.remove('hidden');
+    compressBtn.disabled = false;
+
+    const sizeMB = (selectedFile.size / 1024 / 1024).toFixed(2);
+    statusEl.innerHTML = `✅ Всё готово!<br>` +
+      `Файл: <b>${selectedFile.name}</b> (${sizeMB} МБ)<br>` +
+      `Сохранить в: <b>${allFolders[index].path}</b>`;
+  };
+
+  // Сжатие и сохранение
   compressBtn.onclick = async () => {
-    if (!selectedFileHandle) return;
+    if (!selectedFile) return;
     compressBtn.disabled = true;
     statusEl.textContent = 'Скачиваем файл из MEGA...';
 
     try {
-      const arrayBuffer = await selectedFileHandle.read();
-      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+      // Скачиваем файл из MEGA
+      const buffer = await selectedFile.downloadBuffer();
+      const blob = new Blob([buffer], { type: 'application/pdf' });
       const originalSizeMB = (blob.size / 1024 / 1024).toFixed(2);
 
       // Backend URL на Railway
       const backendUrl = 'https://mega-pdf-compressor-production.up.railway.app/compress';
 
       const formData = new FormData();
-      formData.append('file', blob, selectedFileHandle.name);
+      formData.append('file', blob, selectedFile.name);
       formData.append('level', 'recommended'); // low, recommended, extreme
 
       statusEl.textContent = `Сжимаем через iLovePDF (${originalSizeMB} МБ)...`;
@@ -86,29 +258,25 @@
       // Получаем информацию о сжатии из заголовков
       const reduction = res.headers.get('X-Reduction-Percent') || '?';
 
-      const url = URL.createObjectURL(compressedBlob);
+      statusEl.innerHTML = `✅ Сжато! ${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%)`;
 
-      statusEl.innerHTML = `✅ Готово! ${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%)<br>` +
-        `<a href="${url}" download="[Сжато] ${selectedFileHandle.name}">📥 Скачать</a>`;
+      // Загружаем обратно в MEGA в выбранную папку
+      statusEl.textContent = 'Загружаем сжатый файл в MEGA...';
 
-      // Кнопка "Сохранить в MEGA"
-      const saveBtn = document.createElement('button');
-      saveBtn.className = 'btn';
-      saveBtn.textContent = '💾 Сохранить в MEGA';
-      saveBtn.onclick = async () => {
-        statusEl.textContent = 'Загружаем в MEGA...';
-        try {
-          await mega.upload({
-            name: '[Сжато] ' + selectedFileHandle.name,
-            content: compressedBlob,
-            target: '///'
-          });
-          statusEl.innerHTML = '🎉 Сохранено в корневую папку MEGA!';
-        } catch (e) {
-          statusEl.textContent = `❌ Ошибка загрузки: ${e.message}`;
-        }
+      const compressedFileName = '[Сжато] ' + selectedFile.name;
+      const uploadedFile = await selectedTargetFolder.upload(compressedFileName, compressedBlob).complete;
+
+      statusEl.innerHTML = `🎉 Готово!<br>` +
+        `${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%)<br>` +
+        `Сохранено как: <b>${compressedFileName}</b>`;
+
+      compressBtn.disabled = false;
+      compressBtn.textContent = '✅ Сжать ещё один файл';
+
+      // Сбрасываем выбор для нового файла
+      compressBtn.onclick = () => {
+        location.reload();
       };
-      document.body.appendChild(saveBtn);
 
     } catch (e) {
       statusEl.textContent = `❌ ${e.message}`;

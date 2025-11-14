@@ -48,11 +48,10 @@ def compress():
         # Создаём задачу сжатия
         task = ilovepdf.new_task('compress')
         task.add_file(input_path)
-
-        # Уровень сжатия: 'low', 'recommended', 'extreme'
-        compression_level = request.form.get('level', 'recommended')
         task.set_output_folder(tempfile.gettempdir())
-        task.execute(compression_level=compression_level)
+
+        # Выполняем сжатие (без параметров)
+        task.execute()
 
         # Скачиваем результат
         task.download()
