@@ -15,6 +15,9 @@ RUN pip install --upgrade pip && \
 # Копируем app.py из backend
 COPY backend/app.py .
 
+# Копируем frontend
+COPY frontend /app/frontend
+
 EXPOSE 8000
 CMD gunicorn --bind 0.0.0.0:${PORT:-8000} app:app
 

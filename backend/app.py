@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file, jsonify, send_from_directory
 from flask_cors import CORS
 from pylovepdf.ilovepdf import ILovePdf
 import tempfile
@@ -11,6 +11,11 @@ CORS(app)  # Разрешаем CORS для фронтенда
 # Бесплатный план: 250 запросов/месяц
 ILOVEPDF_PUBLIC_KEY = os.environ.get('ILOVEPDF_PUBLIC_KEY', '')
 ILOVEPDF_SECRET_KEY = os.environ.get('ILOVEPDF_SECRET_KEY', '')
+
+@app.route('/')
+def index():
+    frontend_path = os.path.join(os.path.dirname(__file__), 'frontend')
+    return send_from_directory(frontend_path, 'index.html')
 
 @app.route('/health')
 def health():
