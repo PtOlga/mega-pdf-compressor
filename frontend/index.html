@@ -57,8 +57,8 @@
       const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
       const originalSizeMB = (blob.size / 1024 / 1024).toFixed(2);
 
-      // ⚠️ ЗАМЕНИТЕ ЭТУ ССЫЛКУ на ваш Railway URL после развёртывания!
-      const backendUrl = 'https://ваш-бэкенд.up.railway.app/compress';
+      // Backend URL на Railway
+      const backendUrl = 'https://mega-pdf-compressor-production.up.railway.app/compress';
 
       const formData = new FormData();
       formData.append('file', blob, selectedFileHandle.name);
