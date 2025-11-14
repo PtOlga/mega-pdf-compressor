@@ -21,14 +21,22 @@
 <div id="status" class="status hidden"></div>
 <button id="compressBtn" class="btn hidden" disabled>📤 Сжать</button>
 
-<script src="https://mega.nz/sdk/v4/sdk.js"></script>
+<script src="https://mega.nz/sdk/v4/sdk.js" onload="initMega()"></script>
 <script>
   const statusEl = document.getElementById('status');
   const loginBtn = document.getElementById('loginBtn');
   const compressBtn = document.getElementById('compressBtn');
   let selectedFileHandle = null;
 
-  mega.initialize({});
+  function initMega() {
+    if (typeof mega !== 'undefined') {
+      mega.initialize({});
+    } else {
+      console.error('MEGA SDK не загрузился');
+      statusEl.textContent = '❌ Ошибка загрузки MEGA SDK';
+      statusEl.classList.remove('hidden');
+    }
+  }
 
   loginBtn.onclick = async () => {
     try {
