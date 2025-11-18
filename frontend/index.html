@@ -280,7 +280,10 @@
       statusEl.textContent = 'Загружаем сжатый файл в MEGA...';
 
       const compressedFileName = '[Сжато] ' + selectedFile.name;
-      const uploadedFile = await selectedTargetFolder.upload(compressedFileName, compressedBlob).complete;
+      const uploadedFile = await selectedTargetFolder.upload({
+        name: compressedFileName,
+        size: compressedBlob.size
+      }, compressedBlob).complete;
 
       statusEl.innerHTML = `🎉 Готово!<br>` +
         `${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%)<br>` +
