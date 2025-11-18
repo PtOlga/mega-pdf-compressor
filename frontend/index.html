@@ -265,7 +265,11 @@
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || `HTTP ${res.status}`);
+        let errorMsg = errorData.error || `HTTP ${res.status}`;
+        if (errorData.logs) {
+          errorMsg += '\n\n📋 ЛОГИ:\n' + errorData.logs.join('\n');
+        }
+        throw new Error(errorMsg);
       }
 
       const compressedBlob = await res.blob();

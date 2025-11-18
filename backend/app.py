@@ -24,15 +24,23 @@ def health():
 
 @app.route('/compress', methods=['POST'])
 def compress():
+    logs = []
+
     if not ILOVEPDF_PUBLIC_KEY or not ILOVEPDF_SECRET_KEY:
         return jsonify({"error": "API ключи iLovePDF не настроены"}), 500
 
     file = request.files.get('file')
+    logs.append(f"1. File object: {file}")
+    logs.append(f"2. File type: {type(file)}")
+
     if not file:
-        return jsonify({"error": "Файл не найден"}), 400
+        return jsonify({"error": "Файл не найден", "logs": logs}), 400
+
+    logs.append(f"3. Filename: {file.filename}")
+    logs.append(f"4. Content type: {file.content_type}")
 
     if not file.filename.lower().endswith('.pdf'):
-        return jsonify({"error": "Только PDF файлы"}), 400
+        return jsonify({"error": "Только PDF файлы", "logs": logs}), 400
 
     input_path = None
     output_path = None
@@ -40,7 +48,18 @@ def compress():
     try:
         # Сохраняем загруженный файл
         input_path = tempfile.mktemp(suffix=".pdf")
-        file.save(input_path)
+        logs.append(f"5. Temp path: {input_path}")
+
+        # Читаем данные
+        file_data = file.read()
+        logs.append(f"6. File data type: {type(file_data)}")
+        logs.append(f"7. File data length: {len(file_data) if file_data else 0}")
+
+        # Записываем в файл
+        with open(input_path, 'wb') as f:
+            f.write(file_data)
+
+        logs.append(f"8. File saved successfully")
 
         # Инициализируем iLovePDF
         ilovepdf = ILovePdf(ILOVEPDF_PUBLIC_KEY, verify_ssl=True)
@@ -85,7 +104,10 @@ def compress():
         return response
 
     except Exception as e:
-        return jsonify({"error": f"Ошибка сжатия: {str(e)}"}), 500
+        import traceback
+        logs.append(f"ERROR: {str(e)}")
+        logs.append(f"TRACEBACK: {traceback.format_exc()}")
+        return jsonify({"error": f"Ошибка сжатия: {str(e)}", "logs": logs}), 500
 
     finally:
         # Очищаем временные файлы
