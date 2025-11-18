@@ -249,7 +249,7 @@
 
     try {
       // Скачиваем файл из MEGA
-      const buffer = await selectedFile.downloadBuffer();
+      const buffer = await selectedFile.download();
       const blob = new Blob([buffer], { type: 'application/pdf' });
       const originalSizeMB = (blob.size / 1024 / 1024).toFixed(2);
 
