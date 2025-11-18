@@ -3,6 +3,7 @@ from flask_cors import CORS
 from pylovepdf.ilovepdf import ILovePdf
 import tempfile
 import os
+import shutil
 
 app = Flask(__name__)
 CORS(app)  # Разрешаем CORS для фронтенда
@@ -48,14 +49,22 @@ def compress():
         # Создаём задачу сжатия
         task = ilovepdf.new_task('compress')
         task.add_file(input_path)
-        task.set_output_folder(tempfile.gettempdir())
+
+        # Создаём временную папку для результата
+        output_folder = tempfile.mkdtemp()
+        task.set_output_folder(output_folder)
 
         # Выполняем сжатие (без параметров)
         task.execute()
 
         # Скачиваем результат
         task.download()
-        output_path = task.output_file
+
+        # Находим скачанный файл в папке
+        output_files = os.listdir(output_folder)
+        if not output_files:
+            raise Exception("Файл не был скачан")
+        output_path = os.path.join(output_folder, output_files[0])
 
         # Получаем информацию о размерах
         original_size = os.path.getsize(input_path)
@@ -81,12 +90,18 @@ def compress():
 
     finally:
         # Очищаем временные файлы
-        for path in [input_path, output_path]:
-            if path and os.path.exists(path):
-                try:
-                    os.remove(path)
-                except:
-                    pass
+        if 'input_path' in locals() and os.path.exists(input_path):
+            try:
+                os.remove(input_path)
+            except:
+                pass
+
+        # Очищаем папку с результатом
+        if 'output_folder' in locals() and os.path.exists(output_folder):
+            try:
+                shutil.rmtree(output_folder)
+            except:
+                pass
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=False)
