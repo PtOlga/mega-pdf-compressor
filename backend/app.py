@@ -39,8 +39,11 @@ def compress():
 
     try:
         # Сохраняем загруженный файл
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
-            f.write(file.read())
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf", mode='wb') as f:
+            file_data = file.read()
+            if isinstance(file_data, str):
+                file_data = file_data.encode('utf-8')
+            f.write(file_data)
             input_path = f.name
 
         # Инициализируем iLovePDF
