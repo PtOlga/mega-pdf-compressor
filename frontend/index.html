@@ -115,10 +115,6 @@
 
       // Получаем все папки
       allFolders = [];
-      const filesArray = Object.values(storage.files);
-
-      // Добавляем корневую папку
-      allFolders.push({ folder: storage.root, name: '📁 Корневая папка (Cloud Drive)', path: '/' });
 
       // Рекурсивно собираем все папки
       function collectFolders(folder, path = '') {
@@ -133,7 +129,27 @@
         }
       }
 
-      collectFolders(storage.root, '');
+      // Добавляем корневую папку (Cloud Drive)
+      allFolders.push({ folder: storage.root, name: '📁 Cloud Drive', path: '/Cloud Drive' });
+      collectFolders(storage.root, '/Cloud Drive');
+
+      // Добавляем Inbox (Входящие - расшаренные файлы)
+      if (storage.inbox && storage.inbox.children && storage.inbox.children.length > 0) {
+        allFolders.push({ folder: storage.inbox, name: '📥 Inbox (Входящие)', path: '/Inbox' });
+        collectFolders(storage.inbox, '/Inbox');
+      }
+
+      // Добавляем все mounts (расшаренные папки)
+      if (storage.mounts && storage.mounts.length > 0) {
+        storage.mounts.forEach(mount => {
+          // Пропускаем root, trash, inbox - они уже добавлены
+          if (mount !== storage.root && mount !== storage.trash && mount !== storage.inbox) {
+            const mountName = mount.name || 'Shared Folder';
+            allFolders.push({ folder: mount, name: `🔗 ${mountName} (Расшарено)`, path: `/Shared/${mountName}` });
+            collectFolders(mount, `/Shared/${mountName}`);
+          }
+        });
+      }
 
       // Заполняем список папок-источников
       sourceFolderList.innerHTML = '';
