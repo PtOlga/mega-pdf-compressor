@@ -249,8 +249,17 @@
 
     try {
       // Скачиваем файл из MEGA
-      const buffer = await selectedFile.download();
-      const blob = new Blob([buffer], { type: 'application/pdf' });
+      statusEl.textContent = 'Скачиваем файл из MEGA...';
+
+      // Получаем ReadableStream
+      const stream = selectedFile.download();
+
+      // Конвертируем в ArrayBuffer через Response API
+      const response = new Response(stream);
+      const arrayBuffer = await response.arrayBuffer();
+
+      // Создаём Blob
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
       const originalSizeMB = (blob.size / 1024 / 1024).toFixed(2);
 
       // Backend URL на Railway
