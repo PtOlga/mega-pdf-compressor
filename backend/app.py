@@ -46,80 +46,89 @@ def compress():
     output_folder = None
 
     try:
-        # Сохраняем загруженный файл
-        input_path = tempfile.mktemp(suffix=".pdf")
+        # Создаём временный файл для входного PDF
+        input_fd, input_path = tempfile.mkstemp(suffix=".pdf")
         logs.append(f"5. Temp path: {input_path}")
 
-        # Сохраняем файл напрямую используя file.save()
-        # Это правильный способ сохранения FileStorage объекта
-        file.save(input_path)
-        
-        # Проверяем размер сохранённого файла
-        saved_size = os.path.getsize(input_path)
-        logs.append(f"6. File saved successfully")
-        logs.append(f"7. Saved file size: {saved_size} bytes ({saved_size / 1024 / 1024:.2f} MB)")
-        
-        if saved_size == 0:
-            raise Exception("Файл пустой после сохранения")
-        
-        if saved_size < 100:
-            raise Exception(f"Файл слишком маленький: {saved_size} bytes - возможно, произошла ошибка при загрузке")
+        try:
+            # Читаем данные из FileStorage
+            file_data = file.read()
+            logs.append(f"6. File data read, size: {len(file_data)} bytes")
 
-        logs.append(f"8. Initializing iLovePDF...")
-        
+            # Записываем в временный файл
+            os.write(input_fd, file_data)
+            os.close(input_fd)
+
+            logs.append(f"7. File saved successfully")
+
+            # Проверяем размер сохранённого файла
+            saved_size = os.path.getsize(input_path)
+            logs.append(f"8. Saved file size: {saved_size} bytes ({saved_size / 1024 / 1024:.2f} MB)")
+
+            if saved_size == 0:
+                raise Exception("Файл пустой после сохранения")
+
+            if saved_size < 100:
+                raise Exception(f"Файл слишком маленький: {saved_size} bytes - возможно, произошла ошибка при загрузке")
+        except:
+            os.close(input_fd)
+            raise
+
+        logs.append(f"9. Initializing iLovePDF...")
+
         # Инициализируем iLovePDF
         ilovepdf = ILovePdf(ILOVEPDF_PUBLIC_KEY, verify_ssl=True)
 
-        logs.append(f"9. Creating compress task...")
-        
+        logs.append(f"10. Creating compress task...")
+
         # Создаём задачу сжатия
         task = ilovepdf.new_task('compress')
         task.add_file(input_path)
 
-        logs.append(f"10. File added to task")
+        logs.append(f"11. File added to task")
 
         # Создаём временную папку для результата
         output_folder = tempfile.mkdtemp()
         task.set_output_folder(output_folder)
 
-        logs.append(f"11. Output folder: {output_folder}")
-        logs.append(f"12. Executing compression...")
+        logs.append(f"12. Output folder: {output_folder}")
+        logs.append(f"13. Executing compression...")
 
         # Выполняем сжатие
         task.execute()
 
-        logs.append(f"13. Compression executed, downloading result...")
+        logs.append(f"14. Compression executed, downloading result...")
 
         # Скачиваем результат
         task.download()
 
-        logs.append(f"14. Download complete, checking output folder...")
+        logs.append(f"15. Download complete, checking output folder...")
 
         # Находим скачанный файл в папке
         output_files = os.listdir(output_folder)
-        logs.append(f"15. Files in output folder: {output_files}")
-        
+        logs.append(f"16. Files in output folder: {output_files}")
+
         if not output_files:
             raise Exception("Файл не был скачан - папка пустая")
-            
+
         output_path = os.path.join(output_folder, output_files[0])
-        
+
         # Проверяем, что файл существует и не пустой
         if not os.path.exists(output_path):
             raise Exception(f"Файл не найден: {output_path}")
-            
+
         output_size = os.path.getsize(output_path)
         if output_size == 0:
             raise Exception("Сжатый файл пустой")
-            
-        logs.append(f"16. Output file: {output_path}, size: {output_size} bytes")
+
+        logs.append(f"17. Output file: {output_path}, size: {output_size} bytes")
 
         # Получаем информацию о размерах
         original_size = os.path.getsize(input_path)
         compressed_size = output_size
         reduction = round((1 - compressed_size / original_size) * 100, 1)
 
-        logs.append(f"17. Compression stats: {original_size} -> {compressed_size} bytes ({reduction}% reduction)")
+        logs.append(f"18. Compression stats: {original_size} -> {compressed_size} bytes ({reduction}% reduction)")
 
         response = send_file(
             output_path,
@@ -133,7 +142,7 @@ def compress():
         response.headers['X-Compressed-Size'] = str(compressed_size)
         response.headers['X-Reduction-Percent'] = str(reduction)
 
-        logs.append(f"18. Sending response...")
+        logs.append(f"19. Sending response...")
 
         return response
 
