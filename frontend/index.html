@@ -42,26 +42,26 @@
   </p>
 </div>
 
-<div id="folderSelector" class="hidden">
-  <h3>Шаг 1: Выберите папку с PDF файлами</h3>
-  <select id="sourceFolderList" class="input"></select>
-  <button id="selectSourceFolderBtn" class="btn">📁 Выбрать эту папку</button>
-</div>
+<div id="sourceFolderSelector" class="hidden">
+	  <h3>Шаг 2.1: Исходная папка (где лежат оригиналы)</h3>
+	  <select id="sourceFolderList" class="input"></select>
+	  <button id="selectSourceFolderBtn" class="btn">📁 Выбрать исходную папку</button>
+	</div>
 
-<div id="fileSelector" class="hidden">
-  <h3>Шаг 2: Выберите PDF файл для сжатия</h3>
-  <select id="fileList" class="input"></select>
-  <button id="selectFileBtn" class="btn">📄 Выбрать этот файл</button>
-</div>
+	<div id="processedFolderSelector" class="hidden">
+	  <h3>Шаг 2.2: Папка для сжатых PDF</h3>
+	  <select id="processedFolderList" class="input"></select>
+	  <button id="selectProcessedFolderBtn" class="btn">💾 Выбрать папку для сжатых</button>
+	</div>
 
-<div id="targetFolderSelector" class="hidden">
-  <h3>Шаг 3: Куда сохранить сжатый файл?</h3>
-  <select id="targetFolderList" class="input"></select>
-  <button id="selectTargetFolderBtn" class="btn">💾 Выбрать папку назначения</button>
-</div>
+	<div id="backupFolderSelector" class="hidden">
+	  <h3>Шаг 2.3: Папка для бэкапа исходников</h3>
+	  <select id="backupFolderList" class="input"></select>
+	  <button id="selectBackupFolderBtn" class="btn">🗄️ Выбрать папку бэкапа</button>
+	</div>
 
-<div id="status" class="status hidden"></div>
-<button id="compressBtn" class="btn hidden" disabled>📤 Сжать и сохранить в MEGA</button>
+	<div id="status" class="status hidden"></div>
+	<button id="compressBtn" class="btn hidden" disabled>📤 Сжать все PDF и сохранить в MEGA</button>
 
 <script type="module">
   import { Storage } from 'https://unpkg.com/megajs/dist/main.browser-es.mjs';
@@ -70,28 +70,39 @@
   const loginBtn = document.getElementById('loginBtn');
   const emailInput = document.getElementById('emailInput');
   const passwordInput = document.getElementById('passwordInput');
-  const loginForm = document.getElementById('loginForm');
+	  const loginForm = document.getElementById('loginForm');
+	
+	  const sourceFolderSelector = document.getElementById('sourceFolderSelector');
+	  const sourceFolderList = document.getElementById('sourceFolderList');
+	  const selectSourceFolderBtn = document.getElementById('selectSourceFolderBtn');
 
-  const folderSelector = document.getElementById('folderSelector');
-  const sourceFolderList = document.getElementById('sourceFolderList');
-  const selectSourceFolderBtn = document.getElementById('selectSourceFolderBtn');
+	  const processedFolderSelector = document.getElementById('processedFolderSelector');
+	  const processedFolderList = document.getElementById('processedFolderList');
+	  const selectProcessedFolderBtn = document.getElementById('selectProcessedFolderBtn');
 
-  const fileSelector = document.getElementById('fileSelector');
-  const fileList = document.getElementById('fileList');
-  const selectFileBtn = document.getElementById('selectFileBtn');
+	  const backupFolderSelector = document.getElementById('backupFolderSelector');
+	  const backupFolderList = document.getElementById('backupFolderList');
+	  const selectBackupFolderBtn = document.getElementById('selectBackupFolderBtn');
 
-  const targetFolderSelector = document.getElementById('targetFolderSelector');
-  const targetFolderList = document.getElementById('targetFolderList');
-  const selectTargetFolderBtn = document.getElementById('selectTargetFolderBtn');
+	  const compressBtn = document.getElementById('compressBtn');
+	
+	  let storage = null;
+	  let selectedSourceFolder = null;
+	  let selectedProcessedFolder = null;
+	  let selectedBackupFolder = null;
+	  let selectedSourceFolderPath = '';
+	  let selectedProcessedFolderPath = '';
+	  let selectedBackupFolderPath = '';
+	  let allFolders = [];
+	  let allFiles = [];
 
-  const compressBtn = document.getElementById('compressBtn');
-
-  let storage = null;
-  let selectedFile = null;
-  let selectedSourceFolder = null;
-  let selectedTargetFolder = null;
-  let allFolders = [];
-  let allFiles = [];
+	  function updateCompressButtonState() {
+	    if (selectedSourceFolder && selectedProcessedFolder && selectedBackupFolder && allFiles.length > 0) {
+	      compressBtn.disabled = false;
+	    } else {
+	      compressBtn.disabled = true;
+	    }
+	  }
 
   // Вход в MEGA
   loginBtn.onclick = async () => {
@@ -151,25 +162,35 @@
         });
       }
 
-      // Заполняем список папок-источников
-      sourceFolderList.innerHTML = '';
-      targetFolderList.innerHTML = '';
+	      // Заполняем списки папок
+	      sourceFolderList.innerHTML = '';
+	      processedFolderList.innerHTML = '';
+	      backupFolderList.innerHTML = '';
 
-      allFolders.forEach((item, index) => {
-        const option1 = document.createElement('option');
-        option1.value = index;
-        option1.textContent = item.path;
-        sourceFolderList.appendChild(option1);
+	      allFolders.forEach((item, index) => {
+	        const option1 = document.createElement('option');
+	        option1.value = index;
+	        option1.textContent = item.path;
+	        sourceFolderList.appendChild(option1);
 
-        const option2 = document.createElement('option');
-        option2.value = index;
-        option2.textContent = item.path;
-        targetFolderList.appendChild(option2);
-      });
+	        const option2 = document.createElement('option');
+	        option2.value = index;
+	        option2.textContent = item.path;
+	        processedFolderList.appendChild(option2);
 
-      loginForm.classList.add('hidden');
-      folderSelector.classList.remove('hidden');
-      statusEl.textContent = `✅ Найдено ${allFolders.length} папок. Выберите папку с PDF файлами.`;
+	        const option3 = document.createElement('option');
+	        option3.value = index;
+	        option3.textContent = item.path;
+	        backupFolderList.appendChild(option3);
+	      });
+
+	      loginForm.classList.add('hidden');
+	      sourceFolderSelector.classList.remove('hidden');
+	      processedFolderSelector.classList.remove('hidden');
+	      backupFolderSelector.classList.remove('hidden');
+	      compressBtn.classList.remove('hidden');
+	      compressBtn.disabled = true;
+	      statusEl.textContent = `✅ Найдено ${allFolders.length} папок. Выберите исходную, папку для сжатых и папку бэкапа.`;
 
     } catch (error) {
       statusEl.textContent = `❌ Ошибка входа: ${error.message}`;
@@ -178,163 +199,195 @@
     }
   };
 
-  // Шаг 1: Выбор папки-источника
-  selectSourceFolderBtn.onclick = () => {
-    const index = parseInt(sourceFolderList.value);
-    selectedSourceFolder = allFolders[index].folder;
+	  // Шаг 2.1: выбор исходной папки
+	  selectSourceFolderBtn.onclick = () => {
+	    const index = parseInt(sourceFolderList.value);
+	    if (Number.isNaN(index) || !allFolders[index]) {
+	      statusEl.textContent = '❌ Не удалось определить исходную папку.';
+	      return;
+	    }
 
-    // Собираем PDF файлы из выбранной папки
-    allFiles = [];
-    if (selectedSourceFolder.children) {
-      for (const child of selectedSourceFolder.children) {
-        if (!child.directory && child.name && child.name.toLowerCase().endsWith('.pdf')) {
-          allFiles.push(child);
-        }
-      }
-    }
+	    selectedSourceFolder = allFolders[index].folder;
+	    selectedSourceFolderPath = allFolders[index].path;
 
-    if (allFiles.length === 0) {
-      statusEl.textContent = '❌ В этой папке нет PDF файлов. Выберите другую папку.';
-      return;
-    }
+	    // Собираем PDF файлы из выбранной папки
+	    allFiles = [];
+	    if (selectedSourceFolder.children) {
+	      for (const child of selectedSourceFolder.children) {
+	        if (!child.directory && child.name && child.name.toLowerCase().endsWith('.pdf')) {
+	          allFiles.push(child);
+	        }
+	      }
+	    }
 
-    // Заполняем список файлов
-    fileList.innerHTML = '';
-    allFiles.forEach((file, index) => {
-      const option = document.createElement('option');
-      option.value = index;
-      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-      option.textContent = `${file.name} (${sizeMB} МБ)`;
-      fileList.appendChild(option);
-    });
+	    if (allFiles.length === 0) {
+	      statusEl.textContent = `⚠️ В исходной папке "${selectedSourceFolderPath}" нет PDF файлов. Выберите другую папку.`;
+	    } else {
+	      statusEl.textContent = `✅ Исходная папка: "${selectedSourceFolderPath}". Найдено ${allFiles.length} PDF файлов.`;
+	    }
 
-    folderSelector.classList.add('hidden');
-    fileSelector.classList.remove('hidden');
-    statusEl.textContent = `✅ Найдено ${allFiles.length} PDF файлов в папке "${allFolders[index].path}"`;
-  };
+	    updateCompressButtonState();
+	  };
 
-  // Шаг 2: Выбор файла
-  selectFileBtn.onclick = () => {
-    const index = parseInt(fileList.value);
-    selectedFile = allFiles[index];
+	  // Шаг 2.2: выбор папки для сжатых файлов
+	  selectProcessedFolderBtn.onclick = () => {
+	    const index = parseInt(processedFolderList.value);
+	    if (Number.isNaN(index) || !allFolders[index]) {
+	      statusEl.textContent = '❌ Не удалось определить папку для сжатых файлов.';
+	      return;
+	    }
 
-    const sizeMB = (selectedFile.size / 1024 / 1024).toFixed(2);
-    statusEl.innerHTML = `✅ Выбран файл: <b>${selectedFile.name}</b> (${sizeMB} МБ)`;
+	    selectedProcessedFolder = allFolders[index].folder;
+	    selectedProcessedFolderPath = allFolders[index].path;
 
-    fileSelector.classList.add('hidden');
-    targetFolderSelector.classList.remove('hidden');
-    statusEl.textContent = `✅ Файл выбран. Теперь выберите папку для сохранения сжатого файла.`;
-  };
+	    statusEl.textContent = `✅ Папка для сжатых файлов: "${selectedProcessedFolderPath}".`;
+	    updateCompressButtonState();
+	  };
 
-  // Шаг 3: Выбор папки назначения
-  selectTargetFolderBtn.onclick = () => {
-    const index = parseInt(targetFolderList.value);
-    selectedTargetFolder = allFolders[index].folder;
+	  // Шаг 2.3: выбор папки бэкапа
+	  selectBackupFolderBtn.onclick = () => {
+	    const index = parseInt(backupFolderList.value);
+	    if (Number.isNaN(index) || !allFolders[index]) {
+	      statusEl.textContent = '❌ Не удалось определить папку бэкапа.';
+	      return;
+	    }
 
-    targetFolderSelector.classList.add('hidden');
-    compressBtn.classList.remove('hidden');
-    compressBtn.disabled = false;
+	    selectedBackupFolder = allFolders[index].folder;
+	    selectedBackupFolderPath = allFolders[index].path;
 
-    const sizeMB = (selectedFile.size / 1024 / 1024).toFixed(2);
-    statusEl.innerHTML = `✅ Всё готово!<br>` +
-      `Файл: <b>${selectedFile.name}</b> (${sizeMB} МБ)<br>` +
-      `Сохранить в: <b>${allFolders[index].path}</b>`;
-  };
+	    statusEl.textContent = `✅ Папка бэкапа исходников: "${selectedBackupFolderPath}".`;
+	    updateCompressButtonState();
+	  };
 
-  // Сжатие и сохранение
-  compressBtn.onclick = async () => {
-    if (!selectedFile) return;
-    compressBtn.disabled = true;
-    statusEl.textContent = 'Скачиваем файл из MEGA...';
+	  // Сжатие и сохранение (batch)
+	  compressBtn.onclick = async () => {
+	    if (!selectedSourceFolder || !selectedProcessedFolder || !selectedBackupFolder) {
+	      statusEl.textContent = '❌ Выберите исходную папку, папку для сжатых файлов и папку бэкапа.';
+	      return;
+	    }
 
-    try {
-      // Загрузка файла из MEGA
-      console.log('1. Начинаем загрузку файла:', selectedFile.name);
-      console.log('2. Ожидаемый размер:', selectedFile.size, 'bytes');
+	    if (!allFiles.length) {
+	      statusEl.textContent = '❌ В исходной папке нет PDF файлов для обработки.';
+	      return;
+	    }
 
-      statusEl.textContent = 'Загружаем из MEGA...';
+	    compressBtn.disabled = true;
 
-      // Используем downloadBuffer() для браузера - это правильный метод megajs
-      const arrayBuffer = await selectedFile.downloadBuffer();
+	    const total = allFiles.length;
+	    let okCount = 0;
+	    let warnCount = 0;
+	    let errCount = 0;
+	    const resultLines = [];
 
-      console.log('3. ArrayBuffer получен, размер:', arrayBuffer.byteLength);
+	    statusEl.classList.remove('hidden');
 
-      // Проверяем размер
-      if (arrayBuffer.byteLength !== selectedFile.size) {
-        throw new Error(`Ошибка загрузки: получено ${arrayBuffer.byteLength} байт вместо ${selectedFile.size} байт`);
-      }
+	    // Backend URL на Railway
+	    const backendUrl = 'https://mega-pdf-compressor-production.up.railway.app/compress';
 
-      if (arrayBuffer.byteLength < 1000) {
-        throw new Error(`Файл слишком маленький: ${arrayBuffer.byteLength} байт. Возможно, файл поврежден в MEGA.`);
-      }
+	    for (let i = 0; i < total; i++) {
+	      const file = allFiles[i];
+	      const fileName = file.name || 'Без имени';
 
-      // Создаём Blob
-      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-      console.log('6. Blob создан, размер:', blob.size);
-      
-      const originalSizeMB = (blob.size / 1024 / 1024).toFixed(2);
+	      try {
+	        statusEl.textContent = `(${i + 1}/${total}) Обрабатываем ${fileName}...\n` + resultLines.join('\n');
 
-      statusEl.textContent = `✅ Файл загружен из MEGA: ${originalSizeMB} МБ. Отправляем на сжатие...`;
+	        console.log('1. Начинаем загрузку файла:', fileName);
+	        console.log('2. Ожидаемый размер:', file.size, 'bytes');
 
-      // Backend URL на Railway
-      const backendUrl = 'https://mega-pdf-compressor-production.up.railway.app/compress';
+	        // Загрузка файла из MEGA
+	        const arrayBuffer = await file.downloadBuffer();
 
-      const formData = new FormData();
-      formData.append('file', blob, selectedFile.name);
-      formData.append('level', 'recommended'); // low, recommended, extreme
+	        console.log('3. ArrayBuffer получен, размер:', arrayBuffer.byteLength);
 
-      console.log('7. Отправляем FormData на backend...');
-      statusEl.textContent = `Сжимаем через iLovePDF (${originalSizeMB} МБ)...`;
-      const res = await fetch(backendUrl, { method: 'POST', body: formData });
+	        // Проверяем размер
+	        if (arrayBuffer.byteLength !== file.size) {
+	          throw new Error(`Ошибка загрузки: получено ${arrayBuffer.byteLength} байт вместо ${file.size} байт`);
+	        }
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        let errorMsg = errorData.error || `HTTP ${res.status}`;
-        if (errorData.logs) {
-          errorMsg += '\n\n📋 ЛОГИ:\n' + errorData.logs.join('\n');
-        }
-        throw new Error(errorMsg);
-      }
+	        if (arrayBuffer.byteLength < 1000) {
+	          throw new Error(`Файл слишком маленький: ${arrayBuffer.byteLength} байт. Возможно, файл поврежден в MEGA.`);
+	        }
 
-      // Читаем сжатый файл как ArrayBuffer, а не Blob
-      const compressedArrayBuffer = await res.arrayBuffer();
-      const compressedBytes = new Uint8Array(compressedArrayBuffer);
-      const compressedSizeMB = (compressedBytes.length / 1024 / 1024).toFixed(2);
+	        // Создаём Blob
+	        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+	        console.log('6. Blob создан, размер:', blob.size);
 
-      console.log('8. Compressed bytes length:', compressedBytes.length);
+	        const originalSizeMB = (blob.size / 1024 / 1024).toFixed(2);
 
-      // Получаем информацию о сжатии из заголовков
-      const reduction = res.headers.get('X-Reduction-Percent') || '?';
+	        statusEl.textContent = `(${i + 1}/${total}) Сжимаем ${fileName} (${originalSizeMB} МБ)...\n` + resultLines.join('\n');
 
-      statusEl.innerHTML = `✅ Сжато! ${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%)`;
+	        const formData = new FormData();
+	        formData.append('file', blob, fileName);
+	        formData.append('level', 'recommended'); // low, recommended, extreme
 
-      // Загружаем обратно в MEGA в выбранную папку
-      statusEl.textContent = 'Загружаем сжатый файл в MEGA...';
+	        console.log('7. Отправляем FormData на backend...');
+	        const res = await fetch(backendUrl, { method: 'POST', body: formData });
 
-      const compressedFileName = '[Сжато] ' + selectedFile.name;
-      const uploadedFile = await selectedTargetFolder.upload({
-        name: compressedFileName,
-        size: compressedBytes.length
-      }, compressedBytes).complete;
+	        if (!res.ok) {
+	          let errorMsg = `HTTP ${res.status}`;
+	          try {
+	            const errorData = await res.json();
+	            if (errorData.error) {
+	              errorMsg = errorData.error;
+	            }
+	          } catch (e) {
+	            // ignore JSON parse errors
+	          }
+	          throw new Error(errorMsg);
+	        }
 
-      statusEl.innerHTML = `🎉 Готово!<br>` +
-        `${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%)<br>` +
-        `Сохранено как: <b>${compressedFileName}</b>`;
+	        // Читаем сжатый файл как ArrayBuffer
+	        const compressedArrayBuffer = await res.arrayBuffer();
+	        const compressedBytes = new Uint8Array(compressedArrayBuffer);
+	        const compressedSizeMB = (compressedBytes.length / 1024 / 1024).toFixed(2);
 
-      compressBtn.disabled = false;
-      compressBtn.textContent = '✅ Сжать ещё один файл';
+	        console.log('8. Compressed bytes length:', compressedBytes.length);
 
-      // Сбрасываем выбор для нового файла
-      compressBtn.onclick = () => {
-        location.reload();
-      };
+	        // Получаем информацию о сжатии из заголовков
+	        const reduction = res.headers.get('X-Reduction-Percent') || '?';
 
-    } catch (e) {
-      console.error('Ошибка:', e);
-      statusEl.textContent = `❌ ${e.message}`;
-      compressBtn.disabled = false;
-    }
-  };
+	        // Загружаем обратно в MEGA в папку для сжатых файлов
+	        statusEl.textContent = `(${i + 1}/${total}) Загружаем сжатый файл в MEGA для ${fileName}...\n` + resultLines.join('\n');
+
+	        const compressedFileName = '[Сжато] ' + fileName;
+	        await selectedProcessedFolder.upload({
+	          name: compressedFileName,
+	          size: compressedBytes.length
+	        }, compressedBytes).complete;
+
+	        // Перемещаем оригинал в папку бэкапа
+	        let moveWarning = '';
+	        try {
+	          await file.moveTo(selectedBackupFolder);
+	        } catch (moveErr) {
+	          console.error('Ошибка при перемещении файла в бэкап:', moveErr);
+	          moveWarning = `, НО не удалось переместить оригинал в бэкап (${moveErr.message || moveErr})`;
+	          warnCount++;
+	        }
+
+	        if (!moveWarning) {
+	          okCount++;
+	        }
+
+	        const line = `[OK] ${fileName} — ${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%) — сжат в ${selectedProcessedFolderPath}, оригинал → ${selectedBackupFolderPath}${moveWarning}`;
+	        resultLines.push(line);
+	      } catch (e) {
+	        console.error('Ошибка при обработке файла', fileName, e);
+	        errCount++;
+	        const firstLine = (e.message || String(e)).split('\n')[0];
+	        resultLines.push(`[ERR] ${fileName} — ${firstLine}`);
+	      }
+
+	      statusEl.textContent = `Прогресс: ${i + 1}/${total}\n` + resultLines.join('\n');
+	    }
+
+	    statusEl.textContent += `\n\nИтог: всего ${total}, успешных ${okCount}, предупреждений ${warnCount}, ошибок ${errCount}.`;
+	    // после обработки очищаем список файлов, чтобы избежать повторной обработки тех же PDF
+	    allFiles = [];
+	    updateCompressButtonState();
+	    compressBtn.disabled = false;
+	    compressBtn.textContent = 'Сжать ещё раз';
+	  };
 </script>
 
 </body>
