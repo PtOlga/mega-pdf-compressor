@@ -93,16 +93,14 @@
 	  let selectedSourceFolderPath = '';
 	  let selectedProcessedFolderPath = '';
 	  let selectedBackupFolderPath = '';
-	  let allFolders = [];
-	  let allFiles = [];
-
-	  function updateCompressButtonState() {
-	    if (selectedSourceFolder && selectedProcessedFolder && selectedBackupFolder && allFiles.length > 0) {
-	      compressBtn.disabled = false;
-	    } else {
-	      compressBtn.disabled = true;
-	    }
-	  }
+		  let allFolders = [];
+		  let allFiles = [];
+		
+		  // Кнопка сжатия всегда доступна после логина,
+		  // валидация выбора папок и наличия файлов выполняется при нажатии.
+		  function updateCompressButtonState() {
+		    // Оставляем кнопку активной; здесь ничего не делаем специально.
+		  }
 
   // Вход в MEGA
   loginBtn.onclick = async () => {
@@ -184,13 +182,14 @@
 	        backupFolderList.appendChild(option3);
 	      });
 
-	      loginForm.classList.add('hidden');
-	      sourceFolderSelector.classList.remove('hidden');
-	      processedFolderSelector.classList.remove('hidden');
-	      backupFolderSelector.classList.remove('hidden');
-	      compressBtn.classList.remove('hidden');
-	      compressBtn.disabled = true;
-	      statusEl.textContent = `✅ Найдено ${allFolders.length} папок. Выберите исходную, папку для сжатых и папку бэкапа.`;
+		      loginForm.classList.add('hidden');
+		      sourceFolderSelector.classList.remove('hidden');
+		      processedFolderSelector.classList.remove('hidden');
+		      backupFolderSelector.classList.remove('hidden');
+		      compressBtn.classList.remove('hidden');
+		      // Кнопка видна и активна, валидация — при нажатии
+		      compressBtn.disabled = false;
+		      statusEl.textContent = `✅ Найдено ${allFolders.length} папок. Выберите исходную, папку для сжатых и папку бэкапа.`;
 
     } catch (error) {
       statusEl.textContent = `❌ Ошибка входа: ${error.message}`;
