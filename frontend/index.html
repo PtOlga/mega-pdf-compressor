@@ -68,7 +68,7 @@
     .card {
       background: var(--bg-card);
       border-radius: 16px;
-      padding: 2rem;
+      padding: 1.5rem;
       margin-bottom: 1.5rem;
       box-shadow: var(--shadow-xl);
       transition: all 0.3s ease;
@@ -248,16 +248,55 @@
     }
 
     .folder-selector {
-      margin-bottom: 2rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .folder-selector:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 0;
     }
 
     .folder-selector-header {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      margin-bottom: 1rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 2px solid var(--border);
+      margin-bottom: 0.75rem;
+    }
+
+    .folder-selector-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .folder-selector-row .input-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .folder-selector-row .btn {
+      margin-top: 1.6rem;
+      white-space: nowrap;
+    }
+
+    .folder-info {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--bg-light);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .folder-info.success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
     }
 
     .folder-icon {
@@ -474,16 +513,16 @@
           <div class="folder-icon source">📁</div>
           <h3>Исходная папка</h3>
         </div>
-        <div class="input-group">
-          <label for="sourceFolderList">Папка с оригинальными PDF</label>
-          <select id="sourceFolderList" class="input"></select>
+        <div class="folder-selector-row">
+          <div class="input-group">
+            <label for="sourceFolderList">Папка с оригинальными PDF</label>
+            <select id="sourceFolderList" class="input"></select>
+          </div>
+          <button id="selectSourceFolderBtn" class="btn btn-secondary">
+            Выбрать
+          </button>
         </div>
-        <button id="selectSourceFolderBtn" class="btn btn-secondary">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
-          Выбрать папку
-        </button>
+        <div id="sourceFolderInfo" class="folder-info hidden"></div>
       </div>
 
       <!-- Processed Folder -->
@@ -492,16 +531,16 @@
           <div class="folder-icon processed">💾</div>
           <h3>Папка для сжатых файлов</h3>
         </div>
-        <div class="input-group">
-          <label for="processedFolderList">Куда сохранить сжатые PDF</label>
-          <select id="processedFolderList" class="input"></select>
+        <div class="folder-selector-row">
+          <div class="input-group">
+            <label for="processedFolderList">Куда сохранить сжатые PDF</label>
+            <select id="processedFolderList" class="input"></select>
+          </div>
+          <button id="selectProcessedFolderBtn" class="btn btn-secondary">
+            Выбрать
+          </button>
         </div>
-        <button id="selectProcessedFolderBtn" class="btn btn-secondary">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
-          Выбрать папку
-        </button>
+        <div id="processedFolderInfo" class="folder-info hidden"></div>
       </div>
 
       <!-- Backup Folder -->
@@ -510,16 +549,16 @@
           <div class="folder-icon backup">🗄️</div>
           <h3>Папка для бэкапа</h3>
         </div>
-        <div class="input-group">
-          <label for="backupFolderList">Куда переместить оригиналы</label>
-          <select id="backupFolderList" class="input"></select>
+        <div class="folder-selector-row">
+          <div class="input-group">
+            <label for="backupFolderList">Куда переместить оригиналы</label>
+            <select id="backupFolderList" class="input"></select>
+          </div>
+          <button id="selectBackupFolderBtn" class="btn btn-secondary">
+            Выбрать
+          </button>
         </div>
-        <button id="selectBackupFolderBtn" class="btn btn-secondary">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
-          Выбрать папку
-        </button>
+        <div id="backupFolderInfo" class="folder-info hidden"></div>
       </div>
     </div>
 
@@ -572,6 +611,10 @@
   const compressBtn = document.getElementById('compressBtn');
   const progressBar = document.getElementById('progressBar');
   const progressFill = document.getElementById('progressFill');
+
+  const sourceFolderInfo = document.getElementById('sourceFolderInfo');
+  const processedFolderInfo = document.getElementById('processedFolderInfo');
+  const backupFolderInfo = document.getElementById('backupFolderInfo');
 
   let storage = null;
   let selectedSourceFolder = null;
@@ -699,13 +742,20 @@
       }
     }
 
-    showStatus(`Исходная папка: "${selectedSourceFolderPath}" (найдено ${allFiles.length} PDF файлов)`, 'success');
-    selectSourceFolderBtn.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-      ✓ Выбрано
-    `;
+    // Очищаем статистику при выборе новой папки
+    statusEl.textContent = '';
+    statusCard.classList.add('hidden');
+    progressBar.classList.add('hidden');
+    progressFill.style.width = '0%';
+
+    sourceFolderInfo.classList.remove('hidden');
+    sourceFolderInfo.classList.add('success');
+    sourceFolderInfo.innerHTML = `✓ Выбрано: "${selectedSourceFolderPath}" — найдено ${allFiles.length} PDF ${allFiles.length === 1 ? 'файл' : allFiles.length < 5 ? 'файла' : 'файлов'}`;
+    
+    selectSourceFolderBtn.textContent = '✓ Выбрано';
+    selectSourceFolderBtn.style.background = 'var(--success)';
+    selectSourceFolderBtn.style.color = 'white';
+    selectSourceFolderBtn.style.border = 'none';
   };
 
   // Select Processed Folder
@@ -719,13 +769,14 @@
     selectedProcessedFolder = allFolders[index].folder;
     selectedProcessedFolderPath = allFolders[index].path;
 
-    showStatus(`Папка для сжатых файлов: "${selectedProcessedFolderPath}"`, 'success');
-    selectProcessedFolderBtn.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-      ✓ Выбрано
-    `;
+    processedFolderInfo.classList.remove('hidden');
+    processedFolderInfo.classList.add('success');
+    processedFolderInfo.innerHTML = `✓ Выбрано: "${selectedProcessedFolderPath}"`;
+    
+    selectProcessedFolderBtn.textContent = '✓ Выбрано';
+    selectProcessedFolderBtn.style.background = 'var(--success)';
+    selectProcessedFolderBtn.style.color = 'white';
+    selectProcessedFolderBtn.style.border = 'none';
   };
 
   // Select Backup Folder
@@ -739,13 +790,14 @@
     selectedBackupFolder = allFolders[index].folder;
     selectedBackupFolderPath = allFolders[index].path;
 
-    showStatus(`Папка бэкапа: "${selectedBackupFolderPath}"`, 'success');
-    selectBackupFolderBtn.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-      ✓ Выбрано
-    `;
+    backupFolderInfo.classList.remove('hidden');
+    backupFolderInfo.classList.add('success');
+    backupFolderInfo.innerHTML = `✓ Выбрано: "${selectedBackupFolderPath}"`;
+    
+    selectBackupFolderBtn.textContent = '✓ Выбрано';
+    selectBackupFolderBtn.style.background = 'var(--success)';
+    selectBackupFolderBtn.style.color = 'white';
+    selectBackupFolderBtn.style.border = 'none';
   };
 
   // Compress
@@ -800,7 +852,12 @@
     let okCount = 0;
     let warnCount = 0;
     let errCount = 0;
-    const resultLines = [];
+    
+    // Получаем существующие результаты из статуса (если есть)
+    const existingResults = statusEl.textContent.split('\n').filter(line => 
+      line.startsWith('✅') || line.startsWith('❌') || line.startsWith('⚠️')
+    );
+    const resultLines = [...existingResults];
 
     const backendUrl = 'https://mega-pdf-compressor-production.up.railway.app/compress';
 
@@ -811,7 +868,8 @@
       progressFill.style.width = `${progress}%`;
 
       try {
-        showStatus(`(${i + 1}/${total}) Обрабатываем ${fileName}...\n\n${resultLines.join('\n')}`);
+        statusCard.classList.remove('hidden');
+        statusEl.textContent = `⏳ Обрабатываем (${i + 1}/${total}): ${fileName}...\n\n${resultLines.join('\n')}`;
 
         const arrayBuffer = await file.downloadBuffer();
 
@@ -826,7 +884,7 @@
         const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
         const originalSizeMB = (blob.size / 1024 / 1024).toFixed(2);
 
-        showStatus(`(${i + 1}/${total}) Сжимаем ${fileName} (${originalSizeMB} МБ)...\n\n${resultLines.join('\n')}`);
+        statusEl.textContent = `⏳ Сжимаем (${i + 1}/${total}): ${fileName} (${originalSizeMB} МБ)...\n\n${resultLines.join('\n')}`;
 
         const formData = new FormData();
         formData.append('file', blob, fileName);
@@ -852,7 +910,7 @@
         const compressedSizeMB = (compressedBytes.length / 1024 / 1024).toFixed(2);
         const reduction = res.headers.get('X-Reduction-Percent') || '?';
 
-        showStatus(`(${i + 1}/${total}) Загружаем в MEGA ${fileName}...\n\n${resultLines.join('\n')}`);
+        statusEl.textContent = `⏳ Загружаем в MEGA (${i + 1}/${total}): ${fileName}...\n\n${resultLines.join('\n')}`;
 
         const compressedFileName = '[Сжато] ' + fileName;
         await selectedProcessedFolder.upload({
@@ -865,7 +923,7 @@
           await file.moveTo(selectedBackupFolder);
         } catch (moveErr) {
           console.error('Ошибка перемещения:', moveErr);
-          moveWarning = `, НО не удалось переместить в бэкап`;
+          moveWarning = ' ⚠️ НЕ перемещён в бэкап';
           warnCount++;
         }
 
@@ -882,12 +940,16 @@
         resultLines.push(`❌ ${fileName} — ${firstLine}`);
       }
 
-      showStatus(`Прогресс: ${i + 1}/${total}\n\n${resultLines.join('\n')}`);
+      statusEl.textContent = `Прогресс: ${i + 1}/${total}\n\n${resultLines.join('\n')}`;
     }
 
     progressFill.style.width = '100%';
-    showStatus(`\n\n🎉 Завершено!\n\nВсего: ${total} | Успешно: ${okCount} | Предупреждений: ${warnCount} | Ошибок: ${errCount}`, 'success');
     
+    // Добавляем итоговую статистику после существующих результатов
+    const summaryLine = `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🎉 Завершено! Всего: ${total} | Успешно: ${okCount} | Предупреждений: ${warnCount} | Ошибок: ${errCount}`;
+    statusEl.textContent = resultLines.join('\n') + summaryLine;
+    
+    // Очищаем только список текущих файлов для следующей обработки
     allFiles = [];
     compressBtn.disabled = false;
     compressBtn.innerHTML = `
