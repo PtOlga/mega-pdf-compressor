@@ -296,8 +296,12 @@
         throw new Error(errorMsg);
       }
 
-      const compressedBlob = await res.blob();
-      const compressedSizeMB = (compressedBlob.size / 1024 / 1024).toFixed(2);
+      // Читаем сжатый файл как ArrayBuffer, а не Blob
+      const compressedArrayBuffer = await res.arrayBuffer();
+      const compressedBytes = new Uint8Array(compressedArrayBuffer);
+      const compressedSizeMB = (compressedBytes.length / 1024 / 1024).toFixed(2);
+
+      console.log('8. Compressed bytes length:', compressedBytes.length);
 
       // Получаем информацию о сжатии из заголовков
       const reduction = res.headers.get('X-Reduction-Percent') || '?';
@@ -310,8 +314,8 @@
       const compressedFileName = '[Сжато] ' + selectedFile.name;
       const uploadedFile = await selectedTargetFolder.upload({
         name: compressedFileName,
-        size: compressedBlob.size
-      }, compressedBlob).complete;
+        size: compressedBytes.length
+      }, compressedBytes).complete;
 
       statusEl.innerHTML = `🎉 Готово!<br>` +
         `${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%)<br>` +
