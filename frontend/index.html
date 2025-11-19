@@ -258,19 +258,56 @@
 	    updateCompressButtonState();
 	  };
 
-	  // Сжатие и сохранение (batch)
-	  compressBtn.onclick = async () => {
-	    if (!selectedSourceFolder || !selectedProcessedFolder || !selectedBackupFolder) {
-	      statusEl.textContent = '❌ Выберите исходную папку, папку для сжатых файлов и папку бэкапа.';
-	      return;
-	    }
-
-	    if (!allFiles.length) {
-	      statusEl.textContent = '❌ В исходной папке нет PDF файлов для обработки.';
-	      return;
-	    }
-
-	    compressBtn.disabled = true;
+		  // Сжатие и сохранение (batch)
+		  compressBtn.onclick = async () => {
+		    // На случай, если пользователь только выбрал значения в селектах,
+		    // но не нажал кнопки «Выбрать ... папку» — пытаемся считать выборы отсюда
+		    if (!selectedSourceFolder) {
+		      const idx = parseInt(sourceFolderList.value);
+		      if (!Number.isNaN(idx) && allFolders[idx]) {
+		        selectedSourceFolder = allFolders[idx].folder;
+		        selectedSourceFolderPath = allFolders[idx].path;
+		      }
+		    }
+		    if (!selectedProcessedFolder) {
+		      const idx = parseInt(processedFolderList.value);
+		      if (!Number.isNaN(idx) && allFolders[idx]) {
+		        selectedProcessedFolder = allFolders[idx].folder;
+		        selectedProcessedFolderPath = allFolders[idx].path;
+		      }
+		    }
+		    if (!selectedBackupFolder) {
+		      const idx = parseInt(backupFolderList.value);
+		      if (!Number.isNaN(idx) && allFolders[idx]) {
+		        selectedBackupFolder = allFolders[idx].folder;
+		        selectedBackupFolderPath = allFolders[idx].path;
+		      }
+		    }
+		
+		    if (!selectedSourceFolder || !selectedProcessedFolder || !selectedBackupFolder) {
+		      statusEl.textContent = '❌ Выберите исходную папку, папку для сжатых файлов и папку бэкапа.';
+		      return;
+		    }
+		
+		    // Если список файлов пуст (например, ещё ни разу не жали «Выбрать исходную папку»),
+		    // пробуем собрать PDF из выбранной исходной папки прямо здесь
+		    if (!allFiles.length && selectedSourceFolder && selectedSourceFolder.children) {
+		      allFiles = [];
+		      for (const child of selectedSourceFolder.children) {
+		        if (!child.directory && child.name && child.name.toLowerCase().endsWith('.pdf')) {
+		          allFiles.push(child);
+		        }
+		      }
+		    }
+		
+		    if (!allFiles.length) {
+		      statusEl.textContent = selectedSourceFolderPath
+		        ? `❌ В исходной папке "${selectedSourceFolderPath}" нет PDF файлов для обработки.`
+		        : '❌ В исходной папке нет PDF файлов для обработки.';
+		      return;
+		    }
+		
+		    compressBtn.disabled = true;
 
 	    const total = allFiles.length;
 	    let okCount = 0;
