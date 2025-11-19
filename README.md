@@ -2,24 +2,6 @@
 
 Compress PDF files stored in your MEGA cloud using the iLovePDF API.
 
-## 🚀 Quick start
-
-⚡ **[QUICK_START.md](QUICK_START.md)** – cheat sheet with the most important commands and flows.
-
-### Option 1: Local development (without Docker)
-
-📖 **[SETUP_LOCAL.md](SETUP_LOCAL.md)** – run the app locally in a few minutes.
-
-### Option 2: Deploy to production (Railway)
-
-📖 **[DEPLOY_RAILWAY.md](DEPLOY_RAILWAY.md)** – step‑by‑step Railway deployment guide.
-
-### Option 3: Work with Docker locally (optional)
-
-📖 **[SETUP_DOCKER.md](SETUP_DOCKER.md)** – for those who prefer local Docker.
-
----
-
 ## 📦 Features
 
 - ✅ Works directly with your MEGA cloud (login happens in the browser)
@@ -102,19 +84,7 @@ mega-pdf-compressor/
 │   └── index.html          # Single-page web UI (MEGA login + folder selection)
 ├── Dockerfile              # Main Docker image (backend + frontend) for Railway
 ├── railway.toml            # Railway build and service configuration
-├── SETUP_LOCAL.md          # Local development instructions
-├── SETUP_DOCKER.md         # Docker usage instructions
-├── DEPLOY_RAILWAY.md       # Railway deployment instructions
 └── README.md               # This file
 ```
-
----
-
-## 🤝 Questions?
-
-If something doesn’t work:
-1. Check the corresponding `.md` instruction file.
-2. Make sure your iLovePDF API keys are configured correctly.
-3. Check logs on Railway (if you are deploying there).
 
 Done! 🎉
