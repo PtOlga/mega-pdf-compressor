@@ -99,56 +99,34 @@
     const password = passwordInput.value.trim();
 
     if (!email || !password) {
-      alert('Введите email и пароль');
+      statusEl.textContent = '❌ Введите email и пароль';
+      statusEl.classList.remove('hidden');
       return;
     }
 
+    loginBtn.disabled = true;
+    loginBtn.textContent = '⏳ Подключение...';
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = 'Вход в MEGA...';
+
     try {
-      loginBtn.disabled = true;
-      loginBtn.textContent = '⏳ Подключаемся...';
-      statusEl.textContent = 'Подключаемся к MEGA...';
-      statusEl.classList.remove('hidden');
-
       storage = await new Storage({ email, password }).ready;
+      statusEl.textContent = 'Загружаем список папок...';
 
-      statusEl.textContent = '✅ Успешно подключились! Загружаем структуру папок...';
-
-      // Получаем все папки
       allFolders = [];
 
-      // Рекурсивно собираем все папки
+      // Рекурсивно собираем папки
       function collectFolders(folder, path = '') {
+        const currentPath = path + '/' + (folder.name || 'Root');
+        allFolders.push({ folder, path: currentPath });
+
         if (folder.children) {
           for (const child of folder.children) {
             if (child.directory) {
-              const fullPath = path + '/' + child.name;
-              allFolders.push({ folder: child, name: child.name, path: fullPath });
-              collectFolders(child, fullPath);
+              collectFolders(child, currentPath);
             }
           }
         }
-      }
-
-      // Добавляем корневую папку (Cloud Drive)
-      allFolders.push({ folder: storage.root, name: '📁 Cloud Drive', path: '/Cloud Drive' });
-      collectFolders(storage.root, '/Cloud Drive');
-
-      // Добавляем Inbox (Входящие - расшаренные файлы)
-      if (storage.inbox && storage.inbox.children && storage.inbox.children.length > 0) {
-        allFolders.push({ folder: storage.inbox, name: '📥 Inbox (Входящие)', path: '/Inbox' });
-        collectFolders(storage.inbox, '/Inbox');
-      }
-
-      // Добавляем все mounts (расшаренные папки)
-      if (storage.mounts && storage.mounts.length > 0) {
-        storage.mounts.forEach(mount => {
-          // Пропускаем root, trash, inbox - они уже добавлены
-          if (mount !== storage.root && mount !== storage.trash && mount !== storage.inbox) {
-            const mountName = mount.name || 'Shared Folder';
-            allFolders.push({ folder: mount, name: `🔗 ${mountName} (Расшарено)`, path: `/Shared/${mountName}` });
-            collectFolders(mount, `/Shared/${mountName}`);
-          }
-        });
       }
 
       // Заполняем список папок-источников
@@ -248,19 +226,74 @@
     statusEl.textContent = 'Скачиваем файл из MEGA...';
 
     try {
-      // Скачиваем файл из MEGA
-      statusEl.textContent = 'Скачиваем файл из MEGA...';
+      // ИСПРАВЛЕНИЕ: Используем правильный метод загрузки из MEGA
+      console.log('1. Начинаем загрузку файла:', selectedFile.name);
+      console.log('2. Ожидаемый размер:', selectedFile.size, 'bytes');
 
-      // Получаем ReadableStream
-      const stream = selectedFile.download();
+      // Метод 1: Попытка через downloadBuffer (если доступен)
+      let arrayBuffer;
+      
+      try {
+        // Пробуем downloadBuffer если он существует
+        if (typeof selectedFile.downloadBuffer === 'function') {
+          console.log('3. Используем downloadBuffer()');
+          arrayBuffer = await selectedFile.downloadBuffer();
+        } else {
+          console.log('3. Используем download() stream');
+          // Получаем ReadableStream
+          const stream = selectedFile.download();
+          
+          // Альтернативный способ: собираем chunks вручную
+          const reader = stream.getReader();
+          const chunks = [];
+          let receivedLength = 0;
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            receivedLength += value.length;
+            
+            // Показываем прогресс
+            const percent = Math.round((receivedLength / selectedFile.size) * 100);
+            statusEl.textContent = `Загружаем из MEGA: ${percent}%`;
+          }
+          
+          console.log('4. Загружено chunks:', chunks.length, 'total bytes:', receivedLength);
+          
+          // Объединяем chunks в один Uint8Array
+          const chunksAll = new Uint8Array(receivedLength);
+          let position = 0;
+          for (const chunk of chunks) {
+            chunksAll.set(chunk, position);
+            position += chunk.length;
+          }
+          
+          arrayBuffer = chunksAll.buffer;
+        }
+      } catch (streamError) {
+        console.error('Ошибка при загрузке stream:', streamError);
+        throw new Error(`Не удалось загрузить файл из MEGA: ${streamError.message}`);
+      }
 
-      // Конвертируем в ArrayBuffer через Response API
-      const response = new Response(stream);
-      const arrayBuffer = await response.arrayBuffer();
+      console.log('5. ArrayBuffer получен, размер:', arrayBuffer.byteLength);
+
+      // Проверяем размер
+      if (arrayBuffer.byteLength !== selectedFile.size) {
+        throw new Error(`Ошибка загрузки: получено ${arrayBuffer.byteLength} байт вместо ${selectedFile.size} байт`);
+      }
+
+      if (arrayBuffer.byteLength < 1000) {
+        throw new Error(`Файл слишком маленький: ${arrayBuffer.byteLength} байт. Возможно, файл поврежден в MEGA.`);
+      }
 
       // Создаём Blob
       const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+      console.log('6. Blob создан, размер:', blob.size);
+      
       const originalSizeMB = (blob.size / 1024 / 1024).toFixed(2);
+
+      statusEl.textContent = `✅ Файл загружен из MEGA: ${originalSizeMB} МБ. Отправляем на сжатие...`;
 
       // Backend URL на Railway
       const backendUrl = 'https://mega-pdf-compressor-production.up.railway.app/compress';
@@ -269,6 +302,7 @@
       formData.append('file', blob, selectedFile.name);
       formData.append('level', 'recommended'); // low, recommended, extreme
 
+      console.log('7. Отправляем FormData на backend...');
       statusEl.textContent = `Сжимаем через iLovePDF (${originalSizeMB} МБ)...`;
       const res = await fetch(backendUrl, { method: 'POST', body: formData });
 
@@ -311,6 +345,7 @@
       };
 
     } catch (e) {
+      console.error('Ошибка:', e);
       statusEl.textContent = `❌ ${e.message}`;
       compressBtn.disabled = false;
     }
