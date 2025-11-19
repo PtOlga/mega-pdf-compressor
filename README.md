@@ -1,114 +1,120 @@
-# 📦 MEGA PDF Compressor — бесплатно
+# 📦 MEGA PDF Compressor — Free
 
-Сжимайте PDF-файлы из вашего MEGA-хранилища через iLovePDF API.
+Compress PDF files stored in your MEGA cloud using the iLovePDF API.
 
-## 🚀 Быстрый старт
+## 🚀 Quick start
 
-⚡ **[QUICK_START.md](QUICK_START.md)** — шпаргалка по всем командам
+⚡ **[QUICK_START.md](QUICK_START.md)** – cheat sheet with the most important commands and flows.
 
-### Вариант 1: Локальная разработка (без Docker)
-📖 **[SETUP_LOCAL.md](SETUP_LOCAL.md)** — запуск за 5 минут
+### Option 1: Local development (without Docker)
 
-### Вариант 2: Деплой в продакшн
-📖 **[DEPLOY_RAILWAY.md](DEPLOY_RAILWAY.md)** — пошаговая инструкция
+📖 **[SETUP_LOCAL.md](SETUP_LOCAL.md)** – run the app locally in a few minutes.
 
-### Вариант 3: Работа с Docker (опционально)
-📖 **[SETUP_DOCKER.md](SETUP_DOCKER.md)** — для тех, кто хочет использовать Docker локально
+### Option 2: Deploy to production (Railway)
 
----
+📖 **[DEPLOY_RAILWAY.md](DEPLOY_RAILWAY.md)** – step‑by‑step Railway deployment guide.
 
-## 📦 Возможности
+### Option 3: Work with Docker locally (optional)
 
-- ✅ Работа напрямую с MEGA-хранилищем (логин из браузера)
-- ✅ Выбор **трёх папок** в MEGA:
-  - исходная (оригиналы),
-  - папка для сжатых файлов,
-  - папка для бэкапа исходников
-- ✅ Пакетное сжатие **всех PDF** из исходной папки
-- ✅ Сжатие через профессиональный API iLovePDF
-- ✅ Показ статистики сжатия (размер до/после, процент)
-- ✅ Автоматическое сохранение сжатых файлов в выбранную папку MEGA
-- ✅ Автоматическое перемещение исходных файлов в папку бэкапа после успешного сжатия
-
-## 🛠 Технологии
-
-- **Frontend**: MEGA SDK v4, Vanilla JS
-- **Backend**: Flask, pylovepdf, Docker
-- **Hosting**: Railway (контейнер с backend + встроенный статический frontend)
+📖 **[SETUP_DOCKER.md](SETUP_DOCKER.md)** – for those who prefer local Docker.
 
 ---
 
-## 👣 Как работает веб‑интерфейс
+## 📦 Features
 
-1. Вводите email и пароль от MEGA в форме входа (данные остаются в браузере и идут только в MEGA SDK).
-2. После входа выбираете в MEGA три папки:
-   - **Исходная папка** — где лежат оригинальные PDF;
-   - **Папка для сжатых PDF** — куда будут сохраняться сжатые версии;
-   - **Папка для бэкапа исходников** — куда будут перемещаться оригиналы после успешного сжатия.
-3. Нажимаете кнопку **«Сжать все PDF и сохранить в MEGA»** — приложение по очереди для каждого PDF:
-   - скачивает файл из исходной папки через MEGA SDK;
-   - отправляет его на backend, который сжимает PDF через iLovePDF;
-   - сохраняет сжатый файл в выбранную папку для сжатых;
-   - после успешной загрузки перемещает исходный файл в папку бэкапа.
-4. Внизу страницы отображается компактный лог по каждому файлу (статус, размеры до/после, процент сжатия).
+- ✅ Works directly with your MEGA cloud (login happens in the browser)
+- ✅ Lets you choose **three folders** in MEGA:
+  - source folder (original PDFs),
+  - folder for compressed PDFs,
+  - backup folder for originals
+- ✅ Batch‑compresses **all PDFs** from the selected source folder
+- ✅ Uses the professional iLovePDF API for compression
+- ✅ Shows compression statistics (size before/after, reduction percentage)
+- ✅ Automatically saves compressed PDFs into the chosen folder in MEGA
+- ✅ Automatically moves originals into the backup folder after successful compression
 
-### 🔁 Типичный сценарий использования
+## 🛠 Tech stack
 
-**Пример структуры папок в MEGA:**
+- **Frontend**: MEGA SDK v4 (browser build), vanilla JS
+- **Backend**: Flask, pylovepdf
+- **Runtime**: Docker, Gunicorn
+- **Hosting**: Railway (single container with backend + built‑in static frontend)
 
-- `/Cloud Drive/pdf/Input` — исходная папка с оригинальными PDF;
-- `/Cloud Drive/pdf/Compressed` — папка для сжатых файлов;
-- `/Cloud Drive/pdf/Backup` — папка для бэкапа исходников.
+---
 
-**Шаги:**
+## 👣 How the web UI works
 
-1. Создайте в MEGA три папки, например:
+1. Enter your MEGA email and password in the login form  
+   (credentials stay in the browser and are only used by the MEGA SDK).
+2. After a successful login, select three folders in MEGA:
+   - **Source folder** – where your original PDFs live;
+   - **Folder for compressed PDFs** – where compressed versions will be saved;
+   - **Backup folder for originals** – where originals will be moved after successful compression.
+3. Click **“Compress all PDFs and save to MEGA”** – for each PDF the app will:
+   - download the file from the source folder via the MEGA SDK;
+   - send it to the backend, which compresses the PDF using iLovePDF;
+   - upload the compressed file into the selected folder for compressed PDFs;
+   - after a successful upload, move the original file into the backup folder.
+4. At the bottom of the page you’ll see a compact log per file  
+   (status, sizes before/after, compression percentage).
+
+### 🔁 Typical usage scenario
+
+**Example folder structure in MEGA:**
+
+- `/Cloud Drive/pdf/Input` – source folder with original PDFs;
+- `/Cloud Drive/pdf/Compressed` – folder for compressed files;
+- `/Cloud Drive/pdf/Backup` – folder for backups of originals.
+
+**Steps:**
+
+1. Create three folders in MEGA, for example:
    - `Cloud Drive/pdf/Input`
    - `Cloud Drive/pdf/Compressed`
    - `Cloud Drive/pdf/Backup`
-2. Сложите все исходные PDF в `Input`.
-3. Откройте веб‑приложение, войдите в MEGA и выберите эти папки в интерфейсе.
-4. Нажмите **«Сжать все PDF и сохранить в MEGA»**.
-5. По завершении:
-   - в `Compressed` окажутся сжатые версии с префиксом `[Сжато]`;
-   - в `Backup` окажутся оригиналы;
-   - папка `Input` опустеет (если все файлы успешно сжаты и перемещены).
+2. Put all the original PDFs you want to process into `Input`.
+3. Open the web app, log into MEGA and select these three folders in the UI.
+4. Click **“Compress all PDFs and save to MEGA”**.
+5. After the process finishes:
+   - `Compressed` will contain compressed versions prefixed with `[Сжато]` (Russian for “[Compressed]”);
+   - `Backup` will contain the original files;
+   - the `Input` folder will be empty (if every file was processed and moved successfully).
 
-## 💰 Бесплатные лимиты
+## 💰 Free quotas
 
-- **GitHub Pages**: безлимитно
-- **Railway**: 500 часов/месяц (достаточно для хобби-проекта)
-- **iLovePDF API**: 250 запросов/месяц
+- **GitHub Pages**: not used anymore (frontend is now served by the backend container)
+- **Railway**: about 500 free hours/month in the hobby tier (check current limits)
+- **iLovePDF API**: 250 tasks/month on the free plan (see the official docs)
 
 ---
 
-## 📁 Структура проекта
+## 📁 Project structure
 
 ```
 mega-pdf-compressor/
 ├── backend/
 │   ├── app.py              # Flask API
-│   ├── Dockerfile          # Альтернативный Docker для backend
-│   ├── requirements.txt    # Python зависимости
-│   ├── run_local.py        # Локальный запуск backend
-│   └── .env.example        # Шаблон для API‑ключей iLovePDF
+│   ├── Dockerfile          # Alternative Dockerfile for backend-only image
+│   ├── requirements.txt    # Python dependencies
+│   ├── run_local.py        # Local backend runner
+│   └── .env.example        # Template for iLovePDF API keys
 ├── frontend/
-│   └── index.html          # Веб‑интерфейс (MEGA + форма выбора папок)
-├── Dockerfile              # Основной Docker‑образ (backend + frontend) для Railway
-├── railway.toml            # Конфигурация сборки Railway
-├── SETUP_LOCAL.md          # Инструкция: локальная разработка
-├── SETUP_DOCKER.md         # Инструкция: работа с Docker
-├── DEPLOY_RAILWAY.md       # Инструкция: деплой на Railway
-└── README.md               # Этот файл
+│   └── index.html          # Single-page web UI (MEGA login + folder selection)
+├── Dockerfile              # Main Docker image (backend + frontend) for Railway
+├── railway.toml            # Railway build and service configuration
+├── SETUP_LOCAL.md          # Local development instructions
+├── SETUP_DOCKER.md         # Docker usage instructions
+├── DEPLOY_RAILWAY.md       # Railway deployment instructions
+└── README.md               # This file
 ```
 
 ---
 
-## 🤝 Вопросы?
+## 🤝 Questions?
 
-Если что-то не работает:
-1. Проверьте инструкции в соответствующем `.md` файле
-2. Убедитесь, что API ключи iLovePDF настроены правильно
-3. Проверьте логи в Railway (если деплоите)
+If something doesn’t work:
+1. Check the corresponding `.md` instruction file.
+2. Make sure your iLovePDF API keys are configured correctly.
+3. Check logs on Railway (if you are deploying there).
 
-Готово! 🎉
+Done! 🎉
