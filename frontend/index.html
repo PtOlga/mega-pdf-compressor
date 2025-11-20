@@ -165,6 +165,34 @@
       background: var(--bg-light);
     }
 
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-wrapper .input {
+      padding-right: 3rem;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 0.75rem;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-size: 1.1rem;
+    }
+
+    .password-toggle:focus {
+      outline: none;
+    }
+
     .input:focus {
       outline: none;
       border-color: var(--primary);
@@ -483,7 +511,18 @@
 
     <div class="input-group">
       <label for="passwordInput">Пароль</label>
-      <input type="password" id="passwordInput" placeholder="••••••••" class="input">
+      <div class="password-wrapper">
+        <input type="password" id="passwordInput" placeholder="••••••••" class="input">
+        <button
+          type="button"
+          id="togglePasswordVisibility"
+          class="password-toggle"
+          aria-label="Показать пароль"
+          title="Показать пароль"
+        >
+          👁
+        </button>
+      </div>
     </div>
 
     <button id="loginBtn" class="btn btn-full">
@@ -592,6 +631,7 @@
   const loginBtn = document.getElementById('loginBtn');
   const emailInput = document.getElementById('emailInput');
   const passwordInput = document.getElementById('passwordInput');
+  const togglePasswordVisibility = document.getElementById('togglePasswordVisibility');
   const loginForm = document.getElementById('loginForm');
   const folderSelectors = document.getElementById('folderSelectors');
   
@@ -672,6 +712,17 @@
               collectFolders(child, fullPath);
             }
           }
+
+  // Toggle password visibility
+  if (togglePasswordVisibility && passwordInput) {
+    togglePasswordVisibility.addEventListener('click', () => {
+      const isHidden = passwordInput.type === 'password';
+      passwordInput.type = isHidden ? 'text' : 'password';
+      togglePasswordVisibility.textContent = isHidden ? '🙈' : '👁';
+      togglePasswordVisibility.setAttribute('aria-label', isHidden ? 'Скрыть пароль' : 'Показать пароль');
+      togglePasswordVisibility.setAttribute('title', isHidden ? 'Скрыть пароль' : 'Показать пароль');
+    });
+  }
         }
       }
 
