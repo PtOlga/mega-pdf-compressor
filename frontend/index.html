@@ -186,7 +186,7 @@
       align-items: center;
       justify-content: center;
       padding: 0;
-      font-size: 1.1rem;
+      font-size: 1.5rem;
     }
 
     .password-toggle:focus {
@@ -683,7 +683,18 @@
     });
   }
 
-  // Login
+	  // Toggle password visibility (доступен сразу, до логина)
+	  if (togglePasswordVisibility && passwordInput) {
+	    togglePasswordVisibility.addEventListener('click', () => {
+	      const isHidden = passwordInput.type === 'password';
+	      passwordInput.type = isHidden ? 'text' : 'password';
+	      togglePasswordVisibility.textContent = isHidden ? '🙈' : '👁';
+	      togglePasswordVisibility.setAttribute('aria-label', isHidden ? 'Скрыть пароль' : 'Показать пароль');
+	      togglePasswordVisibility.setAttribute('title', isHidden ? 'Скрыть пароль' : 'Показать пароль');
+	    });
+	  }
+
+	  // Login
   loginBtn.onclick = async () => {
     const email = emailInput.value.trim();
     const password = passwordInput.value.trim();
@@ -697,34 +708,23 @@
     loginBtn.innerHTML = '<span class="spinner">⏳</span> Подключение...';
     showStatus('Подключение к MEGA...');
 
-    try {
-      storage = await new Storage({ email, password }).ready;
-      showStatus('Успешно подключились! Загружаем структуру папок...', 'success');
+	    try {
+	      storage = await new Storage({ email, password }).ready;
+	      showStatus('Успешно подключились! Загружаем структуру папок...', 'success');
 
-      allFolders = [];
+	      allFolders = [];
 
-      function collectFolders(folder, path = '') {
-        if (folder.children) {
-          for (const child of folder.children) {
-            if (child.directory) {
-              const fullPath = path + '/' + child.name;
-              allFolders.push({ folder: child, name: child.name, path: fullPath });
-              collectFolders(child, fullPath);
-            }
-          }
-
-  // Toggle password visibility
-  if (togglePasswordVisibility && passwordInput) {
-    togglePasswordVisibility.addEventListener('click', () => {
-      const isHidden = passwordInput.type === 'password';
-      passwordInput.type = isHidden ? 'text' : 'password';
-      togglePasswordVisibility.textContent = isHidden ? '🙈' : '👁';
-      togglePasswordVisibility.setAttribute('aria-label', isHidden ? 'Скрыть пароль' : 'Показать пароль');
-      togglePasswordVisibility.setAttribute('title', isHidden ? 'Скрыть пароль' : 'Показать пароль');
-    });
-  }
-        }
-      }
+	      function collectFolders(folder, path = '') {
+	        if (folder.children) {
+	          for (const child of folder.children) {
+	            if (child.directory) {
+	              const fullPath = path + '/' + child.name;
+	              allFolders.push({ folder: child, name: child.name, path: fullPath });
+	              collectFolders(child, fullPath);
+	            }
+	          }
+	        }
+	      }
 
       allFolders.push({ folder: storage.root, name: '📁 Cloud Drive', path: '/Cloud Drive' });
       collectFolders(storage.root, '/Cloud Drive');
