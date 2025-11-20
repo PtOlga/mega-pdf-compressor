@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MEGA PDF Compressor</title>
+  <title>MEGA PDF Compressor — Локально и в облаке</title>
   <style>
     * {
       margin: 0;
@@ -44,7 +44,7 @@
 
     .header {
       text-align: center;
-      margin-bottom: 3rem;
+      margin-bottom: 2rem;
       color: white;
     }
 
@@ -79,10 +79,112 @@
       box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.15);
     }
 
+    /* Mode Switcher */
+    .mode-switcher {
+      display: inline-flex;
+      gap: 0.5rem;
+      background: var(--bg-light);
+      padding: 0.5rem;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+    }
+
+    .mode-option {
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .mode-option:hover {
+      background: rgba(102, 126, 234, 0.1);
+      color: var(--text-primary);
+    }
+
+    .mode-option.active {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .mode-option .icon {
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .mode-option .title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .mode-option .description {
+      display: none;
+    }
+
+    .mode-option .badge {
+      display: none;
+    }
+
+    /* Step Indicator */
+    .step-indicator-wrapper {
+      position: relative;
+      margin-bottom: 2rem;
+      padding-left: 50px;
+    }
+
+    .home-button {
+      position: absolute;
+      left: 0;
+      top: 15px;
+      width: 36px;
+      height: 36px;
+      background: white;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 1.1rem;
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+    }
+
+    .home-button:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      transform: scale(1.15);
+      box-shadow: var(--shadow-md);
+    }
+
+    .home-button:hover::after {
+      content: 'На главную';
+      position: absolute;
+      left: 0;
+      top: 50px;
+      white-space: nowrap;
+      background: var(--text-primary);
+      color: white;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      box-shadow: var(--shadow-md);
+      z-index: 10;
+    }
+
     .step-indicator {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 2rem;
       position: relative;
     }
 
@@ -133,18 +235,78 @@
 
     .step-label {
       font-size: 0.875rem;
-      color: var(--text-secondary);
+      color: rgba(255, 255, 255, 0.9);
       text-align: center;
-      font-weight: 500;
+      font-weight: 600;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
     .step.active .step-label {
-      color: var(--primary);
-      font-weight: 600;
+      color: white;
+      font-weight: 700;
+    }
+
+    .step.completed .step-label {
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    /* Folder Selectors */
+    .folder-selector {
+      margin-bottom: 1.25rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .folder-selector:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 0;
+    }
+
+    .folder-selector-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .folder-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+
+    .folder-icon.source {
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .folder-icon.processed {
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .folder-icon.backup {
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .folder-selector-header h3 {
+      font-size: 1.1rem;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .folder-selector-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
     }
 
     .input-group {
-      margin-bottom: 1.5rem;
+      flex: 1;
+      margin-bottom: 0;
     }
 
     .input-group label {
@@ -165,39 +327,17 @@
       background: var(--bg-light);
     }
 
-    .password-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-
-    .password-wrapper .input {
-      padding-right: 3rem;
-    }
-
-    .password-toggle {
-      position: absolute;
-      right: 0.75rem;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      font-size: 1.5rem;
-    }
-
-    .password-toggle:focus {
-      outline: none;
-    }
-
     .input:focus {
       outline: none;
       border-color: var(--primary);
       background: white;
       box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    .input:disabled {
+      background: var(--border);
+      cursor: not-allowed;
+      opacity: 0.6;
     }
 
     select.input {
@@ -224,6 +364,7 @@
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
+      white-space: nowrap;
     }
 
     .btn:hover:not(:disabled) {
@@ -257,57 +398,8 @@
       justify-content: center;
     }
 
-    .security-note {
-      background: rgba(102, 126, 234, 0.1);
-      border-left: 4px solid var(--primary);
-      padding: 1rem;
-      border-radius: 8px;
-      margin-top: 1rem;
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: start;
-      gap: 0.75rem;
-    }
-
-    .security-note svg {
-      flex-shrink: 0;
-      margin-top: 0.125rem;
-    }
-
-    .folder-selector {
-      margin-bottom: 1.25rem;
-      padding-bottom: 1.25rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .folder-selector:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-      margin-bottom: 0;
-    }
-
-    .folder-selector-header {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 0.75rem;
-    }
-
-    .folder-selector-row {
-      display: flex;
-      gap: 0.75rem;
-      align-items: flex-start;
-    }
-
-    .folder-selector-row .input-group {
-      flex: 1;
-      margin-bottom: 0;
-    }
-
     .folder-selector-row .btn {
       margin-top: 1.6rem;
-      white-space: nowrap;
     }
 
     .folder-info {
@@ -327,34 +419,56 @@
       color: var(--success);
     }
 
-    .folder-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+    /* Local Mode Specific */
+    .local-folder-path {
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-size: 1.25rem;
+      padding: 0.875rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-light);
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      font-style: italic;
     }
 
-    .folder-icon.source {
-      background: rgba(59, 130, 246, 0.1);
-    }
-
-    .folder-icon.processed {
-      background: rgba(16, 185, 129, 0.1);
-    }
-
-    .folder-icon.backup {
-      background: rgba(245, 158, 11, 0.1);
-    }
-
-    .folder-selector-header h3 {
-      font-size: 1.1rem;
+    .local-folder-path.selected {
+      border-color: var(--success);
+      background: rgba(16, 185, 129, 0.05);
       color: var(--text-primary);
-      margin: 0;
+      font-style: normal;
     }
 
+    /* Info boxes */
+    .info-box {
+      background: rgba(102, 126, 234, 0.1);
+      border-left: 4px solid var(--primary);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: start;
+      gap: 0.75rem;
+    }
+
+    .info-box svg {
+      flex-shrink: 0;
+      margin-top: 0.125rem;
+    }
+
+    .info-box.warning {
+      background: rgba(245, 158, 11, 0.1);
+      border-left-color: var(--warning);
+    }
+
+    .info-box.success {
+      background: rgba(16, 185, 129, 0.1);
+      border-left-color: var(--success);
+    }
+
+    /* Status */
     .status {
       background: var(--bg-light);
       border-radius: 12px;
@@ -384,20 +498,24 @@
       border-radius: 4px;
     }
 
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      transition: width 0.3s ease;
+      border-radius: 999px;
+    }
+
     .hidden {
       display: none;
-    }
-
-    .success-icon {
-      color: var(--success);
-    }
-
-    .error-icon {
-      color: var(--error);
-    }
-
-    .info-icon {
-      color: var(--primary);
     }
 
     @keyframes fadeIn {
@@ -424,29 +542,34 @@
       animation: spin 1s linear infinite;
     }
 
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background: var(--border);
-      border-radius: 999px;
-      overflow: hidden;
-      margin: 1rem 0;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      transition: width 0.3s ease;
-      border-radius: 999px;
-    }
-
     @media (max-width: 768px) {
       .header h1 {
         font-size: 2rem;
       }
 
       .card {
-        padding: 1.5rem;
+        padding: 1rem;
+      }
+
+      .step-indicator-wrapper {
+        padding-left: 0;
+        padding-top: 50px;
+      }
+
+      .home-button {
+        left: 50%;
+        transform: translateX(-50%);
+        top: 0;
+      }
+
+      .home-button:hover {
+        transform: translateX(-50%) scale(1.15);
+      }
+
+      .home-button:hover::after {
+        left: 50%;
+        transform: translateX(-50%);
+        top: 50px;
       }
 
       .step-indicator {
@@ -472,6 +595,20 @@
       .step-label {
         text-align: left;
       }
+
+      .folder-selector-row {
+        flex-direction: column;
+      }
+
+      .folder-selector-row .btn {
+        margin-top: 0.5rem;
+        width: 100%;
+      }
+
+      .mode-switcher {
+        width: 100%;
+        justify-content: center;
+      }
     }
   </style>
 </head>
@@ -483,69 +620,92 @@
       <span>📦</span>
       MEGA PDF Compressor
     </h1>
-    <p>Сжимайте PDF-файлы прямо из облачного хранилища MEGA</p>
+    <p>Сжимайте PDF-файлы локально или в облаке MEGA</p>
   </div>
 
-  <!-- Step Indicator -->
-  <div class="step-indicator">
-    <div class="step active" id="step1">
-      <div class="step-number">1</div>
-      <div class="step-label">Вход в MEGA</div>
-    </div>
-    <div class="step" id="step2">
-      <div class="step-number">2</div>
-      <div class="step-label">Выбор папок</div>
-    </div>
-    <div class="step" id="step3">
-      <div class="step-number">3</div>
-      <div class="step-label">Сжатие файлов</div>
-    </div>
-  </div>
-
-  <!-- Login Form -->
-  <div id="loginForm" class="card">
-    <div class="input-group">
-      <label for="emailInput">Email от MEGA</label>
-      <input type="email" id="emailInput" placeholder="your.email@example.com" class="input">
-    </div>
-
-    <div class="input-group">
-      <label for="passwordInput">Пароль</label>
-      <div class="password-wrapper">
-        <input type="password" id="passwordInput" placeholder="••••••••" class="input">
-        <button
-          type="button"
-          id="togglePasswordVisibility"
-          class="password-toggle"
-          aria-label="Показать пароль"
-          title="Показать пароль"
-        >
-          👁
-        </button>
+  <!-- Step 0: Mode Selection -->
+  <div class="card" id="modeCard">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+      <h2 style="margin: 0; color: var(--text-primary); font-size: 1.5rem;">
+        Где находятся ваши файлы?
+      </h2>
+      
+      <div class="mode-switcher">
+        <div class="mode-option active" id="localMode" onclick="selectMode('local')">
+          <span class="icon">💻</span>
+          <span class="title">Этот компьютер</span>
+        </div>
+        
+        <div class="mode-option" id="cloudMode" onclick="selectMode('cloud')">
+          <span class="icon">☁️</span>
+          <span class="title">Облако MEGA</span>
+        </div>
       </div>
     </div>
 
-    <button id="loginBtn" class="btn btn-full">
+    <div class="info-box" id="localModeInfo">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
       </svg>
-      Войти в MEGA
-    </button>
+      <div>
+        <strong>Локальный режим:</strong> Выбирайте папки на вашем компьютере через стандартные диалоги. 
+        Поддерживается в Chrome и Edge. PDF отправляются на сервер только для сжатия.
+      </div>
+    </div>
 
-    <div class="security-note">
+    <div class="info-box hidden" id="cloudModeInfo">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
       </svg>
       <div>
-        <strong>Безопасность:</strong> Ваши данные обрабатываются только в браузере и не отправляются на сервер. Все операции с MEGA выполняются локально.
+        <strong>Облачный режим:</strong> Войдите в MEGA и работайте с файлами прямо в облаке. 
+        Ваши данные обрабатываются только в браузере и не передаются на сервер.
+      </div>
+    </div>
+
+    <button class="btn btn-full" onclick="confirmMode()" style="margin-top: 1.5rem;">
+      Продолжить
+    </button>
+  </div>
+
+  <!-- Step Indicator (hidden initially) -->
+  <div class="step-indicator-wrapper hidden" id="stepIndicatorWrapper">
+    <button class="home-button" onclick="goHome()" title="Вернуться к выбору режима">
+      🏠
+    </button>
+    <div class="step-indicator" id="stepIndicator">
+      <div class="step active" id="step1">
+        <div class="step-number">1</div>
+        <div class="step-label" id="step1Label">Вход / Выбор</div>
+      </div>
+      <div class="step" id="step2">
+        <div class="step-number">2</div>
+        <div class="step-label">Выбор папок</div>
+      </div>
+      <div class="step" id="step3">
+        <div class="step-number">3</div>
+        <div class="step-label">Сжатие файлов</div>
       </div>
     </div>
   </div>
 
-  <!-- Folder Selectors -->
-  <div id="folderSelectors" class="hidden">
+  <!-- LOCAL MODE: Folder Selection -->
+  <div id="localFolderSelectors" class="hidden">
     <div class="card">
+      <div class="info-box warning">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <div>
+          <strong>Требуется Chrome или Edge:</strong> File System Access API не поддерживается в Firefox и Safari. 
+          Используйте Chrome или Edge для полной функциональности.
+        </div>
+      </div>
+
       <!-- Source Folder -->
       <div class="folder-selector">
         <div class="folder-selector-header">
@@ -554,14 +714,16 @@
         </div>
         <div class="folder-selector-row">
           <div class="input-group">
-            <label for="sourceFolderList">Папка с оригинальными PDF</label>
-            <select id="sourceFolderList" class="input"></select>
+            <label>Папка с оригинальными PDF</label>
+            <div class="local-folder-path" id="localSourcePath">
+              Нажмите "Выбрать" для выбора папки
+            </div>
           </div>
-          <button id="selectSourceFolderBtn" class="btn btn-secondary">
+          <button class="btn btn-secondary" onclick="selectLocalFolder('source')">
             Выбрать
           </button>
         </div>
-        <div id="sourceFolderInfo" class="folder-info hidden"></div>
+        <div id="localSourceInfo" class="folder-info hidden"></div>
       </div>
 
       <!-- Processed Folder -->
@@ -572,14 +734,16 @@
         </div>
         <div class="folder-selector-row">
           <div class="input-group">
-            <label for="processedFolderList">Куда сохранить сжатые PDF</label>
-            <select id="processedFolderList" class="input"></select>
+            <label>Куда сохранить сжатые PDF</label>
+            <div class="local-folder-path" id="localProcessedPath">
+              Нажмите "Выбрать" для выбора папки
+            </div>
           </div>
-          <button id="selectProcessedFolderBtn" class="btn btn-secondary">
+          <button class="btn btn-secondary" onclick="selectLocalFolder('processed')">
             Выбрать
           </button>
         </div>
-        <div id="processedFolderInfo" class="folder-info hidden"></div>
+        <div id="localProcessedInfo" class="folder-info hidden"></div>
       </div>
 
       <!-- Backup Folder -->
@@ -590,29 +754,139 @@
         </div>
         <div class="folder-selector-row">
           <div class="input-group">
-            <label for="backupFolderList">Куда переместить оригиналы</label>
-            <select id="backupFolderList" class="input"></select>
+            <label>Куда переместить оригиналы</label>
+            <div class="local-folder-path" id="localBackupPath">
+              Нажмите "Выбрать" для выбора папки
+            </div>
           </div>
-          <button id="selectBackupFolderBtn" class="btn btn-secondary">
+          <button class="btn btn-secondary" onclick="selectLocalFolder('backup')">
             Выбрать
           </button>
         </div>
-        <div id="backupFolderInfo" class="folder-info hidden"></div>
+        <div id="localBackupInfo" class="folder-info hidden"></div>
       </div>
     </div>
 
     <!-- Compress Button -->
     <div class="card">
-      <button id="compressBtn" class="btn btn-full" disabled>
+      <button id="compressBtnLocal" class="btn btn-full" disabled onclick="compressLocal()">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
           <polyline points="7 10 12 15 17 10"></polyline>
           <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
-        Сжать все PDF и сохранить в MEGA
+        Сжать все PDF и сохранить
       </button>
-      <div id="progressBar" class="progress-bar hidden">
-        <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+      <div id="progressBarLocal" class="progress-bar hidden">
+        <div id="progressFillLocal" class="progress-fill" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLOUD MODE: MEGA Login & Folder Selection -->
+  <div id="cloudInterface" class="hidden">
+    <!-- Login Form -->
+    <div id="loginForm" class="card">
+      <div class="input-group">
+        <label for="emailInput">Email от MEGA</label>
+        <input type="email" id="emailInput" placeholder="your.email@example.com" class="input">
+      </div>
+
+      <div class="input-group">
+        <label for="passwordInput">Пароль</label>
+        <input type="password" id="passwordInput" placeholder="••••••••" class="input">
+      </div>
+
+      <button id="loginBtn" class="btn btn-full" onclick="loginMega()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        Войти в MEGA
+      </button>
+
+      <div class="info-box" style="margin-top: 1rem;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        <div>
+          <strong>Безопасность:</strong> Ваши данные обрабатываются только в браузере и не отправляются на сервер. 
+          Все операции с MEGA выполняются локально.
+        </div>
+      </div>
+    </div>
+
+    <!-- Cloud Folder Selectors (after login) -->
+    <div id="cloudFolderSelectors" class="hidden">
+      <div class="card">
+        <!-- Source Folder -->
+        <div class="folder-selector">
+          <div class="folder-selector-header">
+            <div class="folder-icon source">📁</div>
+            <h3>Исходная папка</h3>
+          </div>
+          <div class="folder-selector-row">
+            <div class="input-group">
+              <label for="sourceFolderList">Папка с оригинальными PDF</label>
+              <select id="sourceFolderList" class="input"></select>
+            </div>
+            <button class="btn btn-secondary" onclick="selectCloudFolder('source')">
+              Выбрать
+            </button>
+          </div>
+          <div id="cloudSourceInfo" class="folder-info hidden"></div>
+        </div>
+
+        <!-- Processed Folder -->
+        <div class="folder-selector">
+          <div class="folder-selector-header">
+            <div class="folder-icon processed">💾</div>
+            <h3>Папка для сжатых файлов</h3>
+          </div>
+          <div class="folder-selector-row">
+            <div class="input-group">
+              <label for="processedFolderList">Куда сохранить сжатые PDF</label>
+              <select id="processedFolderList" class="input"></select>
+            </div>
+            <button class="btn btn-secondary" onclick="selectCloudFolder('processed')">
+              Выбрать
+            </button>
+          </div>
+          <div id="cloudProcessedInfo" class="folder-info hidden"></div>
+        </div>
+
+        <!-- Backup Folder -->
+        <div class="folder-selector">
+          <div class="folder-selector-header">
+            <div class="folder-icon backup">🗄️</div>
+            <h3>Папка для бэкапа</h3>
+          </div>
+          <div class="folder-selector-row">
+            <div class="input-group">
+              <label for="backupFolderList">Куда переместить оригиналы</label>
+              <select id="backupFolderList" class="input"></select>
+            </div>
+            <button class="btn btn-secondary" onclick="selectCloudFolder('backup')">
+              Выбрать
+            </button>
+          </div>
+          <div id="cloudBackupInfo" class="folder-info hidden"></div>
+        </div>
+      </div>
+
+      <!-- Compress Button -->
+      <div class="card">
+        <button id="compressBtnCloud" class="btn btn-full" disabled onclick="compressCloud()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Сжать все PDF и сохранить в MEGA
+        </button>
+        <div id="progressBarCloud" class="progress-bar hidden">
+          <div id="progressFillCloud" class="progress-fill" style="width: 0%"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -623,395 +897,165 @@
   </div>
 </div>
 
-<script type="module">
-  import { Storage } from 'https://unpkg.com/megajs/dist/main.browser-es.mjs';
-
-  const statusEl = document.getElementById('status');
-  const statusCard = document.getElementById('statusCard');
-  const loginBtn = document.getElementById('loginBtn');
-  const emailInput = document.getElementById('emailInput');
-  const passwordInput = document.getElementById('passwordInput');
-  const togglePasswordVisibility = document.getElementById('togglePasswordVisibility');
-  const loginForm = document.getElementById('loginForm');
-  const folderSelectors = document.getElementById('folderSelectors');
+<script>
+  // Global state
+  let currentMode = 'local'; // 'local' or 'cloud'
   
-  const step1 = document.getElementById('step1');
-  const step2 = document.getElementById('step2');
-  const step3 = document.getElementById('step3');
+  // Local mode handles
+  let localSourceHandle = null;
+  let localProcessedHandle = null;
+  let localBackupHandle = null;
 
-  const sourceFolderList = document.getElementById('sourceFolderList');
-  const selectSourceFolderBtn = document.getElementById('selectSourceFolderBtn');
-
-  const processedFolderList = document.getElementById('processedFolderList');
-  const selectProcessedFolderBtn = document.getElementById('selectProcessedFolderBtn');
-
-  const backupFolderList = document.getElementById('backupFolderList');
-  const selectBackupFolderBtn = document.getElementById('selectBackupFolderBtn');
-
-  const compressBtn = document.getElementById('compressBtn');
-  const progressBar = document.getElementById('progressBar');
-  const progressFill = document.getElementById('progressFill');
-
-  const sourceFolderInfo = document.getElementById('sourceFolderInfo');
-  const processedFolderInfo = document.getElementById('processedFolderInfo');
-  const backupFolderInfo = document.getElementById('backupFolderInfo');
-
-  let storage = null;
-  let selectedSourceFolder = null;
-  let selectedProcessedFolder = null;
-  let selectedBackupFolder = null;
-  let selectedSourceFolderPath = '';
-  let selectedProcessedFolderPath = '';
-  let selectedBackupFolderPath = '';
-  let allFolders = [];
-  let allFiles = [];
-
-  function showStatus(message, type = 'info') {
-    statusCard.classList.remove('hidden');
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
-    statusEl.textContent = `${icon} ${message}`;
+  // Mode selection
+  function selectMode(mode) {
+    currentMode = mode;
+    
+    // Update UI
+    document.getElementById('localMode').classList.toggle('active', mode === 'local');
+    document.getElementById('cloudMode').classList.toggle('active', mode === 'cloud');
+    
+    document.getElementById('localModeInfo').classList.toggle('hidden', mode !== 'local');
+    document.getElementById('cloudModeInfo').classList.toggle('hidden', mode !== 'cloud');
   }
 
-  function updateSteps(activeStep) {
-    [step1, step2, step3].forEach((step, index) => {
-      step.classList.remove('active', 'completed');
-      if (index + 1 < activeStep) {
-        step.classList.add('completed');
-      } else if (index + 1 === activeStep) {
-        step.classList.add('active');
-      }
-    });
+  function confirmMode() {
+    // Hide mode card
+    document.getElementById('modeCard').classList.add('hidden');
+    
+    // Show step indicator wrapper (includes home button)
+    document.getElementById('stepIndicatorWrapper').classList.remove('hidden');
+    
+    if (currentMode === 'local') {
+      document.getElementById('step1Label').textContent = 'Выбор папок';
+      document.getElementById('localFolderSelectors').classList.remove('hidden');
+    } else {
+      document.getElementById('step1Label').textContent = 'Вход в MEGA';
+      document.getElementById('cloudInterface').classList.remove('hidden');
+    }
   }
 
-	  // Toggle password visibility (доступен сразу, до логина)
-	  if (togglePasswordVisibility && passwordInput) {
-	    togglePasswordVisibility.addEventListener('click', () => {
-	      const isHidden = passwordInput.type === 'password';
-	      passwordInput.type = isHidden ? 'text' : 'password';
-	      togglePasswordVisibility.textContent = isHidden ? '🙈' : '👁';
-	      togglePasswordVisibility.setAttribute('aria-label', isHidden ? 'Скрыть пароль' : 'Показать пароль');
-	      togglePasswordVisibility.setAttribute('title', isHidden ? 'Скрыть пароль' : 'Показать пароль');
-	    });
-	  }
-
-	  // Login
-  loginBtn.onclick = async () => {
-    const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
-
-    if (!email || !password) {
-      showStatus('Введите email и пароль', 'error');
+  // Local folder selection
+  async function selectLocalFolder(type) {
+    // Check if File System Access API is supported
+    if (!('showDirectoryPicker' in window)) {
+      alert('❌ Ваш браузер не поддерживает File System Access API.\n\nИспользуйте Chrome или Edge для работы в локальном режиме.');
       return;
     }
 
-    loginBtn.disabled = true;
-    loginBtn.innerHTML = '<span class="spinner">⏳</span> Подключение...';
-    showStatus('Подключение к MEGA...');
-
-	    try {
-	      storage = await new Storage({ email, password }).ready;
-	      showStatus('Успешно подключились! Загружаем структуру папок...', 'success');
-
-	      allFolders = [];
-
-	      function collectFolders(folder, path = '') {
-	        if (folder.children) {
-	          for (const child of folder.children) {
-	            if (child.directory) {
-	              const fullPath = path + '/' + child.name;
-	              allFolders.push({ folder: child, name: child.name, path: fullPath });
-	              collectFolders(child, fullPath);
-	            }
-	          }
-	        }
-	      }
-
-      allFolders.push({ folder: storage.root, name: '📁 Cloud Drive', path: '/Cloud Drive' });
-      collectFolders(storage.root, '/Cloud Drive');
-
-      if (storage.inbox && storage.inbox.children && storage.inbox.children.length > 0) {
-        allFolders.push({ folder: storage.inbox, name: '📥 Inbox (Входящие)', path: '/Inbox' });
-        collectFolders(storage.inbox, '/Inbox');
-      }
-
-      if (storage.mounts && storage.mounts.length > 0) {
-        storage.mounts.forEach(mount => {
-          if (mount !== storage.root && mount !== storage.trash && mount !== storage.inbox) {
-            const mountName = mount.name || 'Shared Folder';
-            allFolders.push({ folder: mount, name: `🔗 ${mountName} (Расшарено)`, path: `/Shared/${mountName}` });
-            collectFolders(mount, `/Shared/${mountName}`);
-          }
-        });
-      }
-
-      [sourceFolderList, processedFolderList, backupFolderList].forEach(list => {
-        list.innerHTML = '';
-        allFolders.forEach((item, index) => {
-          const option = document.createElement('option');
-          option.value = index;
-          option.textContent = item.path;
-          list.appendChild(option);
-        });
+    try {
+      // Open native folder picker
+      const dirHandle = await window.showDirectoryPicker({
+        mode: 'readwrite'
       });
 
-      loginForm.classList.add('hidden');
-      folderSelectors.classList.remove('hidden');
-      updateSteps(2);
-      compressBtn.disabled = false;
-      showStatus(`Найдено ${allFolders.length} папок. Выберите папки для работы.`, 'success');
-
-    } catch (error) {
-      showStatus(`Ошибка входа: ${error.message}`, 'error');
-      loginBtn.disabled = false;
-      loginBtn.innerHTML = `
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-        </svg>
-        Войти в MEGA
-      `;
-    }
-  };
-
-  // Select Source Folder
-  selectSourceFolderBtn.onclick = () => {
-    const index = parseInt(sourceFolderList.value);
-    if (Number.isNaN(index) || !allFolders[index]) {
-      showStatus('Не удалось определить исходную папку.', 'error');
-      return;
-    }
-
-    selectedSourceFolder = allFolders[index].folder;
-    selectedSourceFolderPath = allFolders[index].path;
-
-    allFiles = [];
-    if (selectedSourceFolder.children) {
-      for (const child of selectedSourceFolder.children) {
-        if (!child.directory && child.name && child.name.toLowerCase().endsWith('.pdf')) {
-          allFiles.push(child);
-        }
-      }
-    }
-
-    // Очищаем статистику при выборе новой папки
-    statusEl.textContent = '';
-    statusCard.classList.add('hidden');
-    progressBar.classList.add('hidden');
-    progressFill.style.width = '0%';
-
-    sourceFolderInfo.classList.remove('hidden');
-    sourceFolderInfo.classList.add('success');
-    sourceFolderInfo.innerHTML = `✓ Выбрано: "${selectedSourceFolderPath}" — найдено ${allFiles.length} PDF ${allFiles.length === 1 ? 'файл' : allFiles.length < 5 ? 'файла' : 'файлов'}`;
-    
-    selectSourceFolderBtn.textContent = '✓ Выбрано';
-    selectSourceFolderBtn.style.background = 'var(--success)';
-    selectSourceFolderBtn.style.color = 'white';
-    selectSourceFolderBtn.style.border = 'none';
-  };
-
-  // Select Processed Folder
-  selectProcessedFolderBtn.onclick = () => {
-    const index = parseInt(processedFolderList.value);
-    if (Number.isNaN(index) || !allFolders[index]) {
-      showStatus('Не удалось определить папку для сжатых файлов.', 'error');
-      return;
-    }
-
-    selectedProcessedFolder = allFolders[index].folder;
-    selectedProcessedFolderPath = allFolders[index].path;
-
-    processedFolderInfo.classList.remove('hidden');
-    processedFolderInfo.classList.add('success');
-    processedFolderInfo.innerHTML = `✓ Выбрано: "${selectedProcessedFolderPath}"`;
-    
-    selectProcessedFolderBtn.textContent = '✓ Выбрано';
-    selectProcessedFolderBtn.style.background = 'var(--success)';
-    selectProcessedFolderBtn.style.color = 'white';
-    selectProcessedFolderBtn.style.border = 'none';
-  };
-
-  // Select Backup Folder
-  selectBackupFolderBtn.onclick = () => {
-    const index = parseInt(backupFolderList.value);
-    if (Number.isNaN(index) || !allFolders[index]) {
-      showStatus('Не удалось определить папку бэкапа.', 'error');
-      return;
-    }
-
-    selectedBackupFolder = allFolders[index].folder;
-    selectedBackupFolderPath = allFolders[index].path;
-
-    backupFolderInfo.classList.remove('hidden');
-    backupFolderInfo.classList.add('success');
-    backupFolderInfo.innerHTML = `✓ Выбрано: "${selectedBackupFolderPath}"`;
-    
-    selectBackupFolderBtn.textContent = '✓ Выбрано';
-    selectBackupFolderBtn.style.background = 'var(--success)';
-    selectBackupFolderBtn.style.color = 'white';
-    selectBackupFolderBtn.style.border = 'none';
-  };
-
-  // Compress
-  compressBtn.onclick = async () => {
-    // Auto-select from dropdowns if not manually selected
-    if (!selectedSourceFolder) {
-      const idx = parseInt(sourceFolderList.value);
-      if (!Number.isNaN(idx) && allFolders[idx]) {
-        selectedSourceFolder = allFolders[idx].folder;
-        selectedSourceFolderPath = allFolders[idx].path;
-      }
-    }
-    if (!selectedProcessedFolder) {
-      const idx = parseInt(processedFolderList.value);
-      if (!Number.isNaN(idx) && allFolders[idx]) {
-        selectedProcessedFolder = allFolders[idx].folder;
-        selectedProcessedFolderPath = allFolders[idx].path;
-      }
-    }
-    if (!selectedBackupFolder) {
-      const idx = parseInt(backupFolderList.value);
-      if (!Number.isNaN(idx) && allFolders[idx]) {
-        selectedBackupFolder = allFolders[idx].folder;
-        selectedBackupFolderPath = allFolders[idx].path;
-      }
-    }
-
-    if (!selectedSourceFolder || !selectedProcessedFolder || !selectedBackupFolder) {
-      showStatus('Выберите все три папки перед началом сжатия.', 'error');
-      return;
-    }
-
-    if (!allFiles.length && selectedSourceFolder && selectedSourceFolder.children) {
-      allFiles = [];
-      for (const child of selectedSourceFolder.children) {
-        if (!child.directory && child.name && child.name.toLowerCase().endsWith('.pdf')) {
-          allFiles.push(child);
-        }
-      }
-    }
-
-    if (!allFiles.length) {
-      showStatus(`В папке "${selectedSourceFolderPath}" нет PDF файлов.`, 'error');
-      return;
-    }
-
-    compressBtn.disabled = true;
-    updateSteps(3);
-    progressBar.classList.remove('hidden');
-
-    const total = allFiles.length;
-    let okCount = 0;
-    let warnCount = 0;
-    let errCount = 0;
-    
-    // Получаем существующие результаты из статуса (если есть)
-    const existingResults = statusEl.textContent.split('\n').filter(line => 
-      line.startsWith('✅') || line.startsWith('❌') || line.startsWith('⚠️')
-    );
-    const resultLines = [...existingResults];
-
-    const backendUrl = 'https://mega-pdf-compressor-production.up.railway.app/compress';
-
-    for (let i = 0; i < total; i++) {
-      const file = allFiles[i];
-      const fileName = file.name || 'Без имени';
-      const progress = ((i + 1) / total * 100).toFixed(0);
-      progressFill.style.width = `${progress}%`;
-
-      try {
-        statusCard.classList.remove('hidden');
-        statusEl.textContent = `⏳ Обрабатываем (${i + 1}/${total}): ${fileName}...\n\n${resultLines.join('\n')}`;
-
-        const arrayBuffer = await file.downloadBuffer();
-
-        if (arrayBuffer.byteLength !== file.size) {
-          throw new Error(`Ошибка загрузки: получено ${arrayBuffer.byteLength} байт вместо ${file.size} байт`);
-        }
-
-        if (arrayBuffer.byteLength < 1000) {
-          throw new Error(`Файл слишком маленький: ${arrayBuffer.byteLength} байт`);
-        }
-
-        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-        const originalSizeMB = (blob.size / 1024 / 1024).toFixed(2);
-
-        statusEl.textContent = `⏳ Сжимаем (${i + 1}/${total}): ${fileName} (${originalSizeMB} МБ)...\n\n${resultLines.join('\n')}`;
-
-        const formData = new FormData();
-        formData.append('file', blob, fileName);
-        formData.append('level', 'recommended');
-
-        const res = await fetch(backendUrl, { method: 'POST', body: formData });
-
-        if (!res.ok) {
-          let errorMsg = `HTTP ${res.status}`;
-          try {
-            const errorData = await res.json();
-            if (errorData.error) {
-              errorMsg = errorData.error;
-            }
-          } catch (e) {
-            // ignore
-          }
-          throw new Error(errorMsg);
-        }
-
-        const compressedArrayBuffer = await res.arrayBuffer();
-        const compressedBytes = new Uint8Array(compressedArrayBuffer);
-        const compressedSizeMB = (compressedBytes.length / 1024 / 1024).toFixed(2);
-        const reduction = res.headers.get('X-Reduction-Percent') || '?';
-
-        statusEl.textContent = `⏳ Загружаем в MEGA (${i + 1}/${total}): ${fileName}...\n\n${resultLines.join('\n')}`;
-
-        const compressedFileName = '[Сжато] ' + fileName;
-        await selectedProcessedFolder.upload({
-          name: compressedFileName,
-          size: compressedBytes.length
-        }, compressedBytes).complete;
-
-        let moveWarning = '';
-        try {
-          await file.moveTo(selectedBackupFolder);
-        } catch (moveErr) {
-          console.error('Ошибка перемещения:', moveErr);
-          moveWarning = ' ⚠️ НЕ перемещён в бэкап';
-          warnCount++;
-        }
-
-        if (!moveWarning) {
-          okCount++;
-        }
-
-        const line = `✅ ${fileName} — ${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%)${moveWarning}`;
-        resultLines.push(line);
-      } catch (e) {
-        console.error('Ошибка:', e);
-        errCount++;
-        const firstLine = (e.message || String(e)).split('\n')[0];
-        resultLines.push(`❌ ${fileName} — ${firstLine}`);
+      // Store handle
+      if (type === 'source') {
+        localSourceHandle = dirHandle;
+        updateLocalFolderDisplay('source', dirHandle.name);
+      } else if (type === 'processed') {
+        localProcessedHandle = dirHandle;
+        updateLocalFolderDisplay('processed', dirHandle.name);
+      } else if (type === 'backup') {
+        localBackupHandle = dirHandle;
+        updateLocalFolderDisplay('backup', dirHandle.name);
       }
 
-      statusEl.textContent = `Прогресс: ${i + 1}/${total}\n\n${resultLines.join('\n')}`;
-    }
+      // Check if all folders are selected
+      checkLocalFoldersReady();
 
-    progressFill.style.width = '100%';
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error('Error selecting folder:', err);
+        alert('❌ Ошибка при выборе папки: ' + err.message);
+      }
+    }
+  }
+
+  function updateLocalFolderDisplay(type, folderName) {
+    const pathEl = document.getElementById(`local${type.charAt(0).toUpperCase() + type.slice(1)}Path`);
+    const infoEl = document.getElementById(`local${type.charAt(0).toUpperCase() + type.slice(1)}Info`);
+
+    pathEl.textContent = `📁 ${folderName}`;
+    pathEl.classList.add('selected');
+
+    if (type === 'source') {
+      // Count PDF files (async)
+      countPDFFiles(localSourceHandle).then(count => {
+        infoEl.classList.remove('hidden');
+        infoEl.classList.add('success');
+        infoEl.textContent = `✓ Выбрано: найдено ${count} PDF ${count === 1 ? 'файл' : count < 5 ? 'файла' : 'файлов'}`;
+      });
+    } else {
+      infoEl.classList.remove('hidden');
+      infoEl.classList.add('success');
+      infoEl.textContent = `✓ Выбрано: "${folderName}"`;
+    }
+  }
+
+  async function countPDFFiles(dirHandle) {
+    let count = 0;
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  function checkLocalFoldersReady() {
+    const allSelected = localSourceHandle && localProcessedHandle && localBackupHandle;
+    document.getElementById('compressBtnLocal').disabled = !allSelected;
+  }
+
+  function compressLocal() {
+    alert('🚧 Функция сжатия в локальном режиме будет реализована.\n\nЛогика:\n1. Читаем PDF из исходной папки\n2. Отправляем на backend для сжатия\n3. Сохраняем в папку для сжатых\n4. Перемещаем оригинал в бэкап');
+  }
+
+  // Cloud MEGA functions (placeholders)
+  function loginMega() {
+    alert('🚧 Функция входа в MEGA (существующий код будет интегрирован)');
+  }
+
+  function selectCloudFolder(type) {
+    alert('🚧 Функция выбора папки в MEGA (существующий код будет интегрирован)');
+  }
+
+  function compressCloud() {
+    alert('🚧 Функция сжатия в облаке MEGA (существующий код будет интегрирован)');
+  }
+
+  // Go back to home (mode selection)
+  function goHome() {
+    // Hide everything
+    document.getElementById('stepIndicatorWrapper').classList.add('hidden');
+    document.getElementById('localFolderSelectors').classList.add('hidden');
+    document.getElementById('cloudInterface').classList.add('hidden');
+    document.getElementById('statusCard').classList.add('hidden');
     
-    // Добавляем итоговую статистику после существующих результатов
-    const summaryLine = `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🎉 Завершено! Всего: ${total} | Успешно: ${okCount} | Предупреждений: ${warnCount} | Ошибок: ${errCount}`;
-    statusEl.textContent = resultLines.join('\n') + summaryLine;
+    // Reset local handles
+    localSourceHandle = null;
+    localProcessedHandle = null;
+    localBackupHandle = null;
     
-    // Очищаем только список текущих файлов для следующей обработки
-    allFiles = [];
-    compressBtn.disabled = false;
-    compressBtn.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <polyline points="7 10 12 15 17 10"></polyline>
-        <line x1="12" y1="15" x2="12" y2="3"></line>
-      </svg>
-      Сжать ещё раз
-    `;
-  };
+    // Reset local folder displays
+    document.getElementById('localSourcePath').textContent = 'Нажмите "Выбрать" для выбора папки';
+    document.getElementById('localSourcePath').classList.remove('selected');
+    document.getElementById('localProcessedPath').textContent = 'Нажмите "Выбрать" для выбора папки';
+    document.getElementById('localProcessedPath').classList.remove('selected');
+    document.getElementById('localBackupPath').textContent = 'Нажмите "Выбрать" для выбора папки';
+    document.getElementById('localBackupPath').classList.remove('selected');
+    
+    // Hide info blocks
+    document.getElementById('localSourceInfo').classList.add('hidden');
+    document.getElementById('localProcessedInfo').classList.add('hidden');
+    document.getElementById('localBackupInfo').classList.add('hidden');
+    
+    // Reset buttons
+    document.getElementById('compressBtnLocal').disabled = true;
+    
+    // Show mode card
+    document.getElementById('modeCard').classList.remove('hidden');
+  }
 </script>
 
 </body>
