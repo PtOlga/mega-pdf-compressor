@@ -910,6 +910,37 @@
   const statusEl = document.getElementById('status');
   const statusCard = document.getElementById('statusCard');
 
+	  // Cloud (MEGA) elements
+	  const cloudInterface = document.getElementById('cloudInterface');
+	  const loginForm = document.getElementById('loginForm');
+	  const cloudFolderSelectors = document.getElementById('cloudFolderSelectors');
+	  const emailInput = document.getElementById('emailInput');
+	  const passwordInput = document.getElementById('passwordInput');
+	  const loginBtn = document.getElementById('loginBtn');
+
+	  const sourceFolderList = document.getElementById('sourceFolderList');
+	  const processedFolderList = document.getElementById('processedFolderList');
+	  const backupFolderList = document.getElementById('backupFolderList');
+
+	  const cloudSourceInfo = document.getElementById('cloudSourceInfo');
+	  const cloudProcessedInfo = document.getElementById('cloudProcessedInfo');
+	  const cloudBackupInfo = document.getElementById('cloudBackupInfo');
+
+	  const compressBtnCloud = document.getElementById('compressBtnCloud');
+	  const progressBarCloud = document.getElementById('progressBarCloud');
+	  const progressFillCloud = document.getElementById('progressFillCloud');
+
+	  // Cloud (MEGA) state
+	  let storage = null;
+	  let allCloudFolders = [];
+	  let cloudFiles = [];
+	  let selectedCloudSourceFolder = null;
+	  let selectedCloudProcessedFolder = null;
+	  let selectedCloudBackupFolder = null;
+	  let selectedCloudSourcePath = '';
+	  let selectedCloudProcessedPath = '';
+	  let selectedCloudBackupPath = '';
+
   // Обновление индикатора шагов (1–3)
   function updateSteps(activeStep) {
     const steps = [
@@ -1199,17 +1230,380 @@
   }
 
   // Cloud MEGA functions (placeholders)
-  function loginMega() {
-    alert('🚧 Функция входа в MEGA (существующий код будет интегрирован)');
-  }
+	  async function loginMega() {
+	    if (!emailInput || !passwordInput || !loginBtn) {
+	      alert('Не удалось найти элементы формы входа в MEGA на странице.');
+	      return;
+	    }
 
-  function selectCloudFolder(type) {
-    alert('🚧 Функция выбора папки в MEGA (существующий код будет интегрирован)');
-  }
+	    const email = emailInput.value.trim();
+	    const password = passwordInput.value.trim();
 
-  function compressCloud() {
-    alert('🚧 Функция сжатия в облаке MEGA (существующий код будет интегрирован)');
-  }
+	    if (!email || !password) {
+	      showStatus('Введите email и пароль от MEGA.', 'error');
+	      return;
+	    }
+
+	    const originalBtnHtml = loginBtn.innerHTML;
+	    loginBtn.disabled = true;
+	    loginBtn.innerHTML = '<span class="spinner">⏳</span> Подключение...';
+	    showStatus('Подключение к MEGA...', 'info');
+
+	    try {
+	      // Динамически подгружаем MEGA SDK (ESM) только при необходимости
+	      const { Storage } = await import('https://unpkg.com/megajs/dist/main.browser-es.mjs');
+	      storage = await new Storage({ email, password }).ready;
+	      showStatus('Успешно подключились! Загружаем структуру папок...', 'success');
+
+	      allCloudFolders = [];
+
+	      function collectFolders(folder, path = '') {
+	        if (!folder || !folder.children) return;
+	        for (const child of folder.children) {
+	          if (child.directory) {
+	            const fullPath = `${path}/${child.name}`;
+	            allCloudFolders.push({ folder: child, name: child.name, path: fullPath });
+	            collectFolders(child, fullPath);
+	          }
+	        }
+	      }
+
+	      // Основной диск
+	      if (storage.root) {
+	        allCloudFolders.push({ folder: storage.root, name: '📁 Cloud Drive', path: '/Cloud Drive' });
+	        collectFolders(storage.root, '/Cloud Drive');
+	      }
+
+	      // Входящие
+	      if (storage.inbox && storage.inbox.children && storage.inbox.children.length > 0) {
+	        allCloudFolders.push({ folder: storage.inbox, name: '📥 Inbox (Входящие)', path: '/Inbox' });
+	        collectFolders(storage.inbox, '/Inbox');
+	      }
+
+	      // Расшаренные точки монтирования
+	      if (storage.mounts && storage.mounts.length > 0) {
+	        storage.mounts.forEach(mount => {
+	          if (mount !== storage.root && mount !== storage.trash && mount !== storage.inbox) {
+	            const mountName = mount.name || 'Shared Folder';
+	            const basePath = `/Shared/${mountName}`;
+	            allCloudFolders.push({
+	              folder: mount,
+	              name: `🔗 ${mountName} (Расшарено)`,
+	              path: basePath,
+	            });
+	            collectFolders(mount, basePath);
+	          }
+	        });
+	      }
+
+	      // Заполняем выпадающие списки
+	      [sourceFolderList, processedFolderList, backupFolderList].forEach(list => {
+	        if (!list) return;
+	        list.innerHTML = '';
+	        allCloudFolders.forEach((item, index) => {
+	          const option = document.createElement('option');
+	          option.value = index;
+	          option.textContent = item.path;
+	          list.appendChild(option);
+	        });
+	      });
+
+	      // Переключаем интерфейс: скрываем форму логина, показываем выбор папок
+	      if (loginForm) loginForm.classList.add('hidden');
+	      if (cloudFolderSelectors) cloudFolderSelectors.classList.remove('hidden');
+	      updateSteps(2);
+
+	      // Кнопка сжатия станет доступна после выбора трёх папок
+	      if (compressBtnCloud) compressBtnCloud.disabled = true;
+
+	      showStatus(`Найдено ${allCloudFolders.length} папок. Выберите папки для работы.`, 'success');
+	    } catch (error) {
+	      console.error('Ошибка входа в MEGA:', error);
+	      const msg = error && error.message ? error.message : String(error);
+	      showStatus(`Ошибка входа: ${msg}`, 'error');
+	    } finally {
+	      loginBtn.disabled = false;
+	      loginBtn.innerHTML = originalBtnHtml;
+	    }
+	  }
+
+	  function selectCloudFolder(type) {
+	    if (!allCloudFolders.length) {
+	      showStatus('Сначала войдите в MEGA и дождитесь загрузки структуры папок.', 'error');
+	      return;
+	    }
+
+	    const parseIndex = (listEl) => {
+	      if (!listEl) return NaN;
+	      return parseInt(listEl.value, 10);
+	    };
+
+	    if (type === 'source') {
+	      const index = parseIndex(sourceFolderList);
+	      if (Number.isNaN(index) || !allCloudFolders[index]) {
+	        showStatus('Не удалось определить исходную папку.', 'error');
+	        return;
+	      }
+
+	      selectedCloudSourceFolder = allCloudFolders[index].folder;
+	      selectedCloudSourcePath = allCloudFolders[index].path;
+
+	      // Собираем список PDF-файлов в выбранной папке
+	      cloudFiles = [];
+	      if (selectedCloudSourceFolder && selectedCloudSourceFolder.children) {
+	        for (const child of selectedCloudSourceFolder.children) {
+	          if (!child.directory && child.name && child.name.toLowerCase().endsWith('.pdf')) {
+	            cloudFiles.push(child);
+	          }
+	        }
+	      }
+
+	      // Сбрасываем прошлый прогресс/лог
+	      if (statusEl && statusCard) {
+	        statusEl.textContent = '';
+	        statusCard.classList.add('hidden');
+	      }
+	      if (progressBarCloud && progressFillCloud) {
+	        progressBarCloud.classList.add('hidden');
+	        progressFillCloud.style.width = '0%';
+	      }
+
+	      if (cloudSourceInfo) {
+	        const count = cloudFiles.length;
+	        const word = count === 1 ? 'файл' : count < 5 ? 'файла' : 'файлов';
+	        cloudSourceInfo.classList.remove('hidden');
+	        cloudSourceInfo.classList.add('success');
+	        cloudSourceInfo.textContent = `✓ Выбрано: "${selectedCloudSourcePath}" — найдено ${count} PDF ${word}`;
+	      }
+	    } else if (type === 'processed') {
+	      const index = parseIndex(processedFolderList);
+	      if (Number.isNaN(index) || !allCloudFolders[index]) {
+	        showStatus('Не удалось определить папку для сжатых файлов.', 'error');
+	        return;
+	      }
+
+	      selectedCloudProcessedFolder = allCloudFolders[index].folder;
+	      selectedCloudProcessedPath = allCloudFolders[index].path;
+
+	      if (cloudProcessedInfo) {
+	        cloudProcessedInfo.classList.remove('hidden');
+	        cloudProcessedInfo.classList.add('success');
+	        cloudProcessedInfo.textContent = `✓ Выбрано: "${selectedCloudProcessedPath}"`;
+	      }
+	    } else if (type === 'backup') {
+	      const index = parseIndex(backupFolderList);
+	      if (Number.isNaN(index) || !allCloudFolders[index]) {
+	        showStatus('Не удалось определить папку бэкапа.', 'error');
+	        return;
+	      }
+
+	      selectedCloudBackupFolder = allCloudFolders[index].folder;
+	      selectedCloudBackupPath = allCloudFolders[index].path;
+
+	      if (cloudBackupInfo) {
+	        cloudBackupInfo.classList.remove('hidden');
+	        cloudBackupInfo.classList.add('success');
+	        cloudBackupInfo.textContent = `✓ Выбрано: "${selectedCloudBackupPath}"`;
+	      }
+	    }
+
+	    // Активируем кнопку сжатия, когда выбраны все три папки
+	    const ready = selectedCloudSourceFolder && selectedCloudProcessedFolder && selectedCloudBackupFolder;
+	    if (compressBtnCloud) {
+	      compressBtnCloud.disabled = !ready;
+	    }
+	  }
+
+	  async function compressCloud() {
+	    if (!storage) {
+	      showStatus('Сначала войдите в MEGA.', 'error');
+	      return;
+	    }
+
+	    // На всякий случай берём выбранные значения из выпадающих списков,
+	    // если пользователь не нажал кнопку "Выбрать".
+	    const ensureFolderSelected = (current, listEl, assignPathCb) => {
+	      if (current || !listEl) return current;
+	      const idx = parseInt(listEl.value, 10);
+	      if (!Number.isNaN(idx) && allCloudFolders[idx]) {
+	        const { folder, path } = allCloudFolders[idx];
+	        assignPathCb(path);
+	        return folder;
+	      }
+	      return current;
+	    };
+
+	    selectedCloudSourceFolder = ensureFolderSelected(
+	      selectedCloudSourceFolder,
+	      sourceFolderList,
+	      (path) => { selectedCloudSourcePath = path; },
+	    );
+	    selectedCloudProcessedFolder = ensureFolderSelected(
+	      selectedCloudProcessedFolder,
+	      processedFolderList,
+	      (path) => { selectedCloudProcessedPath = path; },
+	    );
+	    selectedCloudBackupFolder = ensureFolderSelected(
+	      selectedCloudBackupFolder,
+	      backupFolderList,
+	      (path) => { selectedCloudBackupPath = path; },
+	    );
+
+	    if (!selectedCloudSourceFolder || !selectedCloudProcessedFolder || !selectedCloudBackupFolder) {
+	      showStatus('Выберите все три папки перед началом сжатия.', 'error');
+	      return;
+	    }
+
+	    // Если список файлов ещё не собран — соберём его сейчас
+	    if ((!cloudFiles || !cloudFiles.length) && selectedCloudSourceFolder && selectedCloudSourceFolder.children) {
+	      cloudFiles = [];
+	      for (const child of selectedCloudSourceFolder.children) {
+	        if (!child.directory && child.name && child.name.toLowerCase().endsWith('.pdf')) {
+	          cloudFiles.push(child);
+	        }
+	      }
+	    }
+
+	    if (!cloudFiles.length) {
+	      showStatus(`В папке "${selectedCloudSourcePath}" нет PDF файлов.`, 'error');
+	      return;
+	    }
+
+	    if (!compressBtnCloud || !progressBarCloud || !progressFillCloud) {
+	      showStatus('Элементы управления облачным сжатием не найдены.', 'error');
+	      return;
+	    }
+
+	    compressBtnCloud.disabled = true;
+	    updateSteps(3);
+	    progressBarCloud.classList.remove('hidden');
+	    statusCard.classList.remove('hidden');
+
+	    const total = cloudFiles.length;
+	    let okCount = 0;
+	    let warnCount = 0;
+	    let errCount = 0;
+
+	    // Сохраняем уже существующие строки результатов (если есть)
+	    const existingResults = statusEl && statusEl.textContent
+	      ? statusEl.textContent.split('\n').filter(line =>
+	          line.startsWith('✅') || line.startsWith('❌') || line.startsWith('⚠️'),
+	        )
+	      : [];
+	    const resultLines = [...existingResults];
+
+	    // Используем тот же backend, что и локальный режим
+	    const backendUrl = '/compress';
+
+	    for (let i = 0; i < total; i++) {
+	      const file = cloudFiles[i];
+	      const fileName = file.name || 'Без имени';
+	      const progress = (((i + 1) / total) * 100).toFixed(0);
+	      progressFillCloud.style.width = `${progress}%`;
+
+	      try {
+	        if (statusEl) {
+	          statusEl.textContent = `⏳ Обрабатываем (${i + 1}/${total}): ${fileName}...\n\n${resultLines.join('\n')}`;
+	        }
+
+	        const arrayBuffer = await file.downloadBuffer();
+
+	        if (arrayBuffer.byteLength !== file.size) {
+	          throw new Error(`Ошибка загрузки: получено ${arrayBuffer.byteLength} байт вместо ${file.size} байт`);
+	        }
+
+	        if (arrayBuffer.byteLength < 1000) {
+	          throw new Error(`Файл слишком маленький: ${arrayBuffer.byteLength} байт`);
+	        }
+
+	        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+	        const originalSizeMB = (blob.size / 1024 / 1024).toFixed(2);
+
+	        if (statusEl) {
+	          statusEl.textContent = `⏳ Сжимаем (${i + 1}/${total}): ${fileName} (${originalSizeMB} МБ)...\n\n${resultLines.join('\n')}`;
+	        }
+
+	        const formData = new FormData();
+	        formData.append('file', blob, fileName);
+	        formData.append('level', 'recommended');
+
+	        const res = await fetch(backendUrl, { method: 'POST', body: formData });
+
+	        if (!res.ok) {
+	          let errorMsg = `HTTP ${res.status}`;
+	          try {
+	            const errorData = await res.json();
+	            if (errorData && errorData.error) {
+	              errorMsg = errorData.error;
+	            }
+	          } catch (e) {
+	            // ignore JSON parse errors
+	          }
+	          throw new Error(errorMsg);
+	        }
+
+	        const compressedArrayBuffer = await res.arrayBuffer();
+	        const compressedBytes = new Uint8Array(compressedArrayBuffer);
+	        const compressedSizeMB = (compressedBytes.length / 1024 / 1024).toFixed(2);
+	        const reduction = res.headers.get('X-Reduction-Percent') || '?';
+
+	        if (statusEl) {
+	          statusEl.textContent = `⏳ Загружаем в MEGA (${i + 1}/${total}): ${fileName}...\n\n${resultLines.join('\n')}`;
+	        }
+
+	        const compressedFileName = '[Сжато] ' + fileName;
+	        await selectedCloudProcessedFolder.upload({
+	          name: compressedFileName,
+	          size: compressedBytes.length,
+	        }, compressedBytes).complete;
+
+	        let moveWarning = '';
+	        try {
+	          await file.moveTo(selectedCloudBackupFolder);
+	        } catch (moveErr) {
+	          console.error('Ошибка перемещения в бэкап:', moveErr);
+	          moveWarning = ' ⚠️ НЕ перемещён в бэкап';
+	          warnCount++;
+	        }
+
+	        if (!moveWarning) {
+	          okCount++;
+	        }
+
+	        const line = `✅ ${fileName} — ${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%)${moveWarning}`;
+	        resultLines.push(line);
+	      } catch (e) {
+	        console.error('Ошибка при сжатии в MEGA:', e);
+	        errCount++;
+	        const firstLine = (e.message || String(e)).split('\n')[0];
+	        resultLines.push(`❌ ${fileName} — ${firstLine}`);
+	      }
+
+	      if (statusEl) {
+	        statusEl.textContent = `Прогресс: ${i + 1}/${total}\n\n${resultLines.join('\n')}`;
+	        statusEl.scrollTop = statusEl.scrollHeight;
+	      }
+	    }
+
+	    progressFillCloud.style.width = '100%';
+	    const summaryLine = `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🎉 Завершено! Всего: ${total} | Успешно: ${okCount} | Предупреждений: ${warnCount} | Ошибок: ${errCount}`;
+	    if (statusEl) {
+	      statusEl.textContent = `${resultLines.join('\n')}${summaryLine}`;
+	      statusEl.scrollTop = statusEl.scrollHeight;
+	    }
+
+	    // Готовы к новому запуску без переразлогина
+	    cloudFiles = [];
+	    compressBtnCloud.disabled = false;
+	    compressBtnCloud.innerHTML = `
+	      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+	        <polyline points="7 10 12 15 17 10"></polyline>
+	        <line x1="12" y1="15" x2="12" y2="3"></line>
+	      </svg>
+	      Сжать ещё раз
+	    `;
+	  }
 
   // Go back to home (mode selection)
   function goHome() {
