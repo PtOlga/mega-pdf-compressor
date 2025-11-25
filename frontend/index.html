@@ -897,23 +897,53 @@
   </div>
 </div>
 
-<script>
+  <script>
   // Global state
   let currentMode = 'local'; // 'local' or 'cloud'
-  
+
   // Local mode handles
   let localSourceHandle = null;
   let localProcessedHandle = null;
   let localBackupHandle = null;
 
+  // Status elements (общий лог для обоих режимов)
+  const statusEl = document.getElementById('status');
+  const statusCard = document.getElementById('statusCard');
+
+  // Обновление индикатора шагов (1–3)
+  function updateSteps(activeStep) {
+    const steps = [
+      document.getElementById('step1'),
+      document.getElementById('step2'),
+      document.getElementById('step3')
+    ];
+
+    steps.forEach((step, index) => {
+      step.classList.remove('active', 'completed');
+      if (index + 1 < activeStep) {
+        step.classList.add('completed');
+      } else if (index + 1 === activeStep) {
+        step.classList.add('active');
+      }
+    });
+  }
+
+  // Короткое сообщение в статусе (для ошибок/инфо)
+  function showStatus(message, type = 'info') {
+    if (!statusEl || !statusCard) return;
+    statusCard.classList.remove('hidden');
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+    statusEl.textContent = `${icon} ${message}`;
+  }
+
   // Mode selection
   function selectMode(mode) {
     currentMode = mode;
-    
+
     // Update UI
     document.getElementById('localMode').classList.toggle('active', mode === 'local');
     document.getElementById('cloudMode').classList.toggle('active', mode === 'cloud');
-    
+
     document.getElementById('localModeInfo').classList.toggle('hidden', mode !== 'local');
     document.getElementById('cloudModeInfo').classList.toggle('hidden', mode !== 'cloud');
   }
@@ -921,10 +951,11 @@
   function confirmMode() {
     // Hide mode card
     document.getElementById('modeCard').classList.add('hidden');
-    
+
     // Show step indicator wrapper (includes home button)
     document.getElementById('stepIndicatorWrapper').classList.remove('hidden');
-    
+    updateSteps(1);
+
     if (currentMode === 'local') {
       document.getElementById('step1Label').textContent = 'Выбор папок';
       document.getElementById('localFolderSelectors').classList.remove('hidden');
@@ -1002,13 +1033,169 @@
     return count;
   }
 
+  // Получаем список PDF-файлов в исходной папке
+  async function getLocalPdfFiles(dirHandle) {
+    const files = [];
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
+        files.push(entry);
+      }
+    }
+    return files;
+  }
+
   function checkLocalFoldersReady() {
     const allSelected = localSourceHandle && localProcessedHandle && localBackupHandle;
     document.getElementById('compressBtnLocal').disabled = !allSelected;
+
+    // Как только выбраны все три папки — считаем шаг 2 активным
+    if (allSelected) {
+      updateSteps(2);
+    }
   }
 
-  function compressLocal() {
-    alert('🚧 Функция сжатия в локальном режиме будет реализована.\n\nЛогика:\n1. Читаем PDF из исходной папки\n2. Отправляем на backend для сжатия\n3. Сохраняем в папку для сжатых\n4. Перемещаем оригинал в бэкап');
+  // Основная логика локального сжатия
+  async function compressLocal() {
+    if (!localSourceHandle || !localProcessedHandle || !localBackupHandle) {
+      showStatus('Выберите три локальные папки перед началом сжатия.', 'error');
+      return;
+    }
+
+    let pdfFiles;
+    try {
+      pdfFiles = await getLocalPdfFiles(localSourceHandle);
+    } catch (e) {
+      showStatus('Не удалось прочитать содержимое исходной папки. Проверьте доступ.', 'error');
+      console.error(e);
+      return;
+    }
+
+    if (!pdfFiles || pdfFiles.length === 0) {
+      showStatus('В исходной папке нет PDF файлов.', 'error');
+      return;
+    }
+
+    const compressBtn = document.getElementById('compressBtnLocal');
+    const progressBar = document.getElementById('progressBarLocal');
+    const progressFill = document.getElementById('progressFillLocal');
+
+    compressBtn.disabled = true;
+    progressBar.classList.remove('hidden');
+    updateSteps(3);
+
+    statusCard.classList.remove('hidden');
+
+    const total = pdfFiles.length;
+    let okCount = 0;
+    let warnCount = 0;
+    let errCount = 0;
+    const resultLines = [];
+
+    const backendUrl = '/compress';
+
+    for (let i = 0; i < total; i++) {
+      const fileHandle = pdfFiles[i];
+      const fileName = fileHandle.name || 'Без имени.pdf';
+      const progress = (((i + 1) / total) * 100).toFixed(0);
+      progressFill.style.width = `${progress}%`;
+
+      try {
+        const file = await fileHandle.getFile();
+        const originalSizeMB = (file.size / 1024 / 1024).toFixed(2);
+
+        statusEl.textContent = `⏳ Сжимаем (${i + 1}/${total}): ${fileName} (${originalSizeMB} МБ)...\n\n${resultLines.join('\n')}`;
+
+        const formData = new FormData();
+        formData.append('file', file, fileName);
+        formData.append('level', 'recommended');
+
+        const res = await fetch(backendUrl, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          let errorMsg = `HTTP ${res.status}`;
+          try {
+            const errorData = await res.json();
+            if (errorData.error) {
+              errorMsg = errorData.error;
+            }
+          } catch (e) {
+            // ignore JSON parse errors
+          }
+          throw new Error(errorMsg);
+        }
+
+        const compressedArrayBuffer = await res.arrayBuffer();
+        const compressedBytes = new Uint8Array(compressedArrayBuffer);
+        const compressedSizeMB = (compressedBytes.length / 1024 / 1024).toFixed(2);
+        const reduction = res.headers.get('X-Reduction-Percent') || '?';
+
+        statusEl.textContent = `⏳ Сохраняем сжатый файл (${i + 1}/${total}): ${fileName}...\n\n${resultLines.join('\n')}`;
+
+        // Записываем сжатый файл в папку для сжатых
+        const compressedFileName = '[Сжато] ' + fileName;
+        const processedFileHandle = await localProcessedHandle.getFileHandle(compressedFileName, { create: true });
+        const processedWritable = await processedFileHandle.createWritable();
+        await processedWritable.write(compressedBytes);
+        await processedWritable.close();
+
+        // Копируем оригинал в папку бэкапа
+        let moveWarning = '';
+        try {
+          const backupFileHandle = await localBackupHandle.getFileHandle(fileName, { create: true });
+          const backupWritable = await backupFileHandle.createWritable();
+          const originalBuffer = await file.arrayBuffer();
+          await backupWritable.write(originalBuffer);
+          await backupWritable.close();
+        } catch (copyErr) {
+          console.error('Ошибка копирования в бэкап:', copyErr);
+          moveWarning = ' ⚠️ НЕ скопирован в бэкап';
+          warnCount++;
+        }
+
+        // Удаляем оригинал из исходной папки (если получилось скопировать)
+        if (!moveWarning) {
+          try {
+            await localSourceHandle.removeEntry(fileName);
+          } catch (removeErr) {
+            console.error('Ошибка удаления оригинала:', removeErr);
+            moveWarning = ' ⚠️ НЕ удалён из исходной папки';
+            warnCount++;
+          }
+        }
+
+        if (!moveWarning) {
+          okCount++;
+        }
+
+        const line = `✅ ${fileName} — ${originalSizeMB} МБ → ${compressedSizeMB} МБ (−${reduction}%)${moveWarning}`;
+        resultLines.push(line);
+      } catch (e) {
+        console.error('Ошибка локального сжатия:', e);
+        errCount++;
+        const firstLine = (e.message || String(e)).split('\n')[0];
+        resultLines.push(`❌ ${fileName} — ${firstLine}`);
+      }
+
+      statusEl.textContent = `Прогресс: ${i + 1}/${total}\n\n${resultLines.join('\n')}`;
+      statusEl.scrollTop = statusEl.scrollHeight;
+    }
+
+    progressFill.style.width = '100%';
+    const summaryLine = `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🎉 Завершено! Всего: ${total} | Успешно: ${okCount} | Предупреждений: ${warnCount} | Ошибок: ${errCount}`;
+    statusEl.textContent = `${resultLines.join('\n')}${summaryLine}`;
+
+    compressBtn.disabled = false;
+    compressBtn.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+      Сжать ещё раз
+    `;
   }
 
   // Cloud MEGA functions (placeholders)
@@ -1031,12 +1218,12 @@
     document.getElementById('localFolderSelectors').classList.add('hidden');
     document.getElementById('cloudInterface').classList.add('hidden');
     document.getElementById('statusCard').classList.add('hidden');
-    
+
     // Reset local handles
     localSourceHandle = null;
     localProcessedHandle = null;
     localBackupHandle = null;
-    
+
     // Reset local folder displays
     document.getElementById('localSourcePath').textContent = 'Нажмите "Выбрать" для выбора папки';
     document.getElementById('localSourcePath').classList.remove('selected');
@@ -1044,19 +1231,19 @@
     document.getElementById('localProcessedPath').classList.remove('selected');
     document.getElementById('localBackupPath').textContent = 'Нажмите "Выбрать" для выбора папки';
     document.getElementById('localBackupPath').classList.remove('selected');
-    
+
     // Hide info blocks
     document.getElementById('localSourceInfo').classList.add('hidden');
     document.getElementById('localProcessedInfo').classList.add('hidden');
     document.getElementById('localBackupInfo').classList.add('hidden');
-    
+
     // Reset buttons
     document.getElementById('compressBtnLocal').disabled = true;
-    
+
     // Show mode card
     document.getElementById('modeCard').classList.remove('hidden');
   }
-</script>
+  </script>
 
 </body>
 </html>
